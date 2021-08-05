@@ -2,15 +2,22 @@ import Foundation
 import CoreBluetooth
 
 class CBCentralManagingDelegate: NSObject {
+    let onDidUpdateState: () -> Void
     let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
     
-    init(onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void) {
+    init(
+        onDidUpdateState: @escaping () -> Void,
+        onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void
+    ) {
+        self.onDidUpdateState = onDidUpdateState
         self.onDidDiscoverPeripheral = onDidDiscoverPeripheral
     }
 }
 
 extension CBCentralManagingDelegate: CBCentralManagerDelegate {
-    func centralManagerDidUpdateState(_ central: CBCentralManager) {}
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        self.onDidUpdateState()
+    }
     
     // Optional
     

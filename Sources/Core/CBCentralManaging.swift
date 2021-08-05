@@ -3,6 +3,7 @@ import CoreBluetooth
 
 protocol CBCentralManaging: AnyObject {
     var delegate: CBCentralManagerDelegate? { get set }
+    var state: CBManagerState { get }
     var isScanning: Bool { get }
     
     func scanForPeripherals(withServices serviceUUIDs: [CBUUID]?, options: [String : Any]?)
