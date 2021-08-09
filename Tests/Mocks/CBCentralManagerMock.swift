@@ -3,10 +3,24 @@ import CoreBluetooth
 @testable import AsyncBluetooth
 
 class CBCentralManagerMock: CBCentralManaging {
+    
     weak var delegate: CBCentralManagerDelegate?
+    
+    var managingDelegate: CBCentralManagingDelegate {
+        guard let delegate = self.delegate as? CBCentralManagingDelegate else {
+            fatalError("Delegate should be an instance of CBCentralManagingDelegate")
+        }
+        return delegate
+    }
     
     var isScanning: Bool {
         self.timer != nil
+    }
+    
+    var state: CBManagerState = .poweredOn {
+        didSet {
+            self.managingDelegate.onDidUpdateState()
+        }
     }
     
     private var timer: Timer?
@@ -19,9 +33,6 @@ class CBCentralManagerMock: CBCentralManaging {
         DispatchQueue.main.async {
             self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
-                guard let delegate = self.delegate as? CBCentralManagingDelegate else {
-                    fatalError("Delegate should be an instance of CBCentralManagingDelegate")
-                }
                 
                 self.peripheralsFound += 1
                 
@@ -30,7 +41,7 @@ class CBCentralManagerMock: CBCentralManaging {
                     advertisementData: [:],
                     rssi: NSNumber(value: self.peripheralsFound)
                 )
-                delegate.onDidDiscoverPeripheral(peripheralScanData)
+                self.managingDelegate.onDidDiscoverPeripheral(peripheralScanData)
             }
         }
     }

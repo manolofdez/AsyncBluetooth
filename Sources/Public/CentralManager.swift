@@ -4,8 +4,20 @@ import os.log
 
 public class CentralManager {
     
-    private enum BluetoothError: Error {
-        case bluetoothUnavailable
+    private typealias Utils = CentralManagerUtils
+    
+    private enum ScanState {
+        case idle
+        case scanning(continuation: AsyncStream<PeripheralScanData>.Continuation)
+        
+        var isScanning: Bool {
+            switch self {
+            case .scanning:
+                return true
+            default:
+                return false
+            }
+        }
     }
     
     private static let logger = Logger(
@@ -13,28 +25,14 @@ public class CentralManager {
         category: "centralManager"
     )
     
-    var state: CBManagerState {
+    var bluetoothState: CBManagerState {
         self.cbCentralManager.state
     }
     
     private let cbCentralManager: CBCentralManaging
     
-    private var waitUntilReadyContinuation: CheckedContinuation<Void, Error>?
+    private var waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
     private var scanState: ScanState = .idle
-    
-    private var isBluetoothReady: Bool? {
-        switch self.state {
-        case .poweredOn:
-            return true
-        case .unsupported, .unauthorized, .poweredOff:
-            return false
-        case .unknown, .resetting:
-            return nil
-        @unknown default:
-            Self.logger.error("Unsupported CBManagerState received with raw value of \(self.state.rawValue)")
-            return false
-        }
-    }
     
     private lazy var cbCentralManagerDelegate: CBCentralManagingDelegate = {
         CBCentralManagingDelegate(
@@ -46,6 +44,8 @@ public class CentralManager {
             }
         )
     }()
+    
+    // MARK: Constructors
 
     public convenience init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
         let cbCentralManager = CBCentralManager(delegate: nil, queue: dispatchQueue, options: options)
@@ -57,26 +57,30 @@ public class CentralManager {
         self.cbCentralManager.delegate = self.cbCentralManagerDelegate
     }
     
-    // TODO: Handle multiple calls
+    // MARK: Public
+    
     public func waitUntilReady() async throws {
-        if let isBluetoothReady = self.isBluetoothReady {
-            guard isBluetoothReady else {
-                throw BluetoothError.bluetoothUnavailable
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Task {
+                // Note since this happens asynchronously, we check whether we have a valid Bluetooth state or not.
+                guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
+                    await self.waitUntilReadyContinuations.append(continuation)
+                    return
+                }
+                continuation.resume(with: isBluetoothReadyResult)
             }
-            return
-        }
-
-        try await withCheckedThrowingContinuation { continuation in
-            self.waitUntilReadyContinuation = continuation
         }
     }
     
-    // TODO: Handle multiple calls
     public func scanForPeripherals(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil
-    ) -> AsyncStream<PeripheralScanData> {
-        AsyncStream(PeripheralScanData.self) { continuation in
+    ) throws -> AsyncStream<PeripheralScanData> {
+        guard case ScanState.idle = self.scanState else {
+            Self.logger.error("Scanning failed: already in progress")
+            throw BluetoothError.scanningInProgress
+        }
+        return AsyncStream(PeripheralScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
                 self.cbCentralManager.stopScan()
                 self.scanState = .idle
@@ -102,47 +106,23 @@ public class CentralManager {
     
     // MARK: CBCentralManagingDelegate Callbacks
     
+    private func onDidUpdateState() {
+        if self.bluetoothState != .poweredOn && self.scanState.isScanning {
+            self.stopScan()
+        }
+        
+        Task {
+            guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else { return }
+
+            await self.waitUntilReadyContinuations.resumeAll(isBluetoothReadyResult)
+        }
+    }
+    
     private func onDidDiscoverPeripheral(_ peripheralScanData: PeripheralScanData) {
         guard case ScanState.scanning(let continuation) = self.scanState else {
             Self.logger.info("Ignoring peripheral '\(peripheralScanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
             return
         }
         continuation.yield(peripheralScanData)
-    }
-    
-    private func onDidUpdateState() {
-        if self.state != .poweredOn && self.scanState.isScanning {
-            self.stopScan()
-        }
-        
-        guard let waitUntilReadyContinuation = self.waitUntilReadyContinuation,
-              let isBluetoothReady = self.isBluetoothReady else
-        {
-            return
-        }
-        
-        if isBluetoothReady {
-            waitUntilReadyContinuation.resume(throwing: BluetoothError.bluetoothUnavailable)
-        } else {
-            waitUntilReadyContinuation.resume()
-        }
-        
-        self.waitUntilReadyContinuation = nil
-    }
-}
-
-extension CentralManager {
-    private enum ScanState {
-        case idle
-        case scanning(continuation: AsyncStream<PeripheralScanData>.Continuation)
-        
-        var isScanning: Bool {
-            switch self {
-            case .scanning:
-                return true
-            default:
-                return false
-            }
-        }
     }
 }
