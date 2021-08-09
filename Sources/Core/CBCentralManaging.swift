@@ -1,6 +1,8 @@
 import Foundation
 import CoreBluetooth
 
+/// Protocol defining an object that scans for, discovers, connects to, and manages peripherals. It's modeled after
+/// `CBCentralManager` and is used for mocking its behavior during testing.
 protocol CBCentralManaging: AnyObject {
     var delegate: CBCentralManagerDelegate? { get set }
     var state: CBManagerState { get }

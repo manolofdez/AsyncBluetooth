@@ -6,8 +6,8 @@ class CBCentralManagerMock: CBCentralManaging {
     
     weak var delegate: CBCentralManagerDelegate?
     
-    var managingDelegate: CBCentralManagingDelegate {
-        guard let delegate = self.delegate as? CBCentralManagingDelegate else {
+    var callbackProvider: CBCentralManagerCallbackProvider {
+        guard let delegate = self.delegate as? CBCentralManagerCallbackProvider else {
             fatalError("Delegate should be an instance of CBCentralManagingDelegate")
         }
         return delegate
@@ -19,7 +19,7 @@ class CBCentralManagerMock: CBCentralManaging {
     
     var state: CBManagerState = .poweredOn {
         didSet {
-            self.managingDelegate.onDidUpdateState()
+            self.callbackProvider.onDidUpdateState()
         }
     }
     
@@ -41,7 +41,7 @@ class CBCentralManagerMock: CBCentralManaging {
                     advertisementData: [:],
                     rssi: NSNumber(value: self.peripheralsFound)
                 )
-                self.managingDelegate.onDidDiscoverPeripheral(peripheralScanData)
+                self.callbackProvider.onDidDiscoverPeripheral(peripheralScanData)
             }
         }
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-enum BluetoothError: Error {
+public enum BluetoothError: Error {
     case bluetoothUnavailable
     case scanningInProgress
 }

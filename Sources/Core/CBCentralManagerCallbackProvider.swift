@@ -1,7 +1,8 @@
 import Foundation
 import CoreBluetooth
 
-class CBCentralManagingDelegate: NSObject {
+/// Provides callbacks for `CBCentralManagerDelegate` functions.
+class CBCentralManagerCallbackProvider: NSObject {
     let onDidUpdateState: () -> Void
     let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
     
@@ -14,7 +15,7 @@ class CBCentralManagingDelegate: NSObject {
     }
 }
 
-extension CBCentralManagingDelegate: CBCentralManagerDelegate {
+extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         self.onDidUpdateState()
     }

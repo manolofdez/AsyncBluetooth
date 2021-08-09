@@ -2,6 +2,7 @@ import Foundation
 import CoreBluetooth
 import os.log
 
+/// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
 public class CentralManager {
     
     private typealias Utils = CentralManagerUtils
@@ -24,8 +25,8 @@ public class CentralManager {
         self.peripheralScanStreamContinuation != nil
     }
     
-    private lazy var cbCentralManagerDelegate: CBCentralManagingDelegate = {
-        CBCentralManagingDelegate(
+    private lazy var cbCentralManagerCallbackProvider: CBCentralManagerCallbackProvider = {
+        CBCentralManagerCallbackProvider(
             onDidUpdateState: { [weak self] in
                 self?.onDidUpdateState()
             },
@@ -44,7 +45,7 @@ public class CentralManager {
     
     init(cbCentralManager: CBCentralManaging) {
         self.cbCentralManager = cbCentralManager
-        self.cbCentralManager.delegate = self.cbCentralManagerDelegate
+        self.cbCentralManager.delegate = self.cbCentralManagerCallbackProvider
     }
     
     // MARK: Public

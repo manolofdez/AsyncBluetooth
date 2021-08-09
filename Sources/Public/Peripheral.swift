@@ -1,6 +1,7 @@
 import Foundation
 import CoreBluetooth
 
+/// A wrapper around `CBPeripheral`, used to interact with a remote peripheral.
 public struct Peripheral {
     private let cbPeripheral: CBPeripheral
     
