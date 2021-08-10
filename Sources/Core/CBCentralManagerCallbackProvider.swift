@@ -5,13 +5,19 @@ import CoreBluetooth
 class CBCentralManagerCallbackProvider: NSObject {
     let onDidUpdateState: () -> Void
     let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
+    let onDidConnect: (Peripheral) -> Void
+    let onDidFailToConnect: (Peripheral, Error?) -> Void
     
     init(
         onDidUpdateState: @escaping () -> Void,
-        onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void
+        onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void,
+        onDidConnect: @escaping (Peripheral) -> Void,
+        onDidFailToConnect: @escaping (Peripheral, Error?) -> Void
     ) {
         self.onDidUpdateState = onDidUpdateState
         self.onDidDiscoverPeripheral = onDidDiscoverPeripheral
+        self.onDidConnect = onDidConnect
+        self.onDidFailToConnect = onDidFailToConnect
     }
 }
 
@@ -19,8 +25,6 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         self.onDidUpdateState()
     }
-    
-    // Optional
     
 //    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {}
     
@@ -38,13 +42,17 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
         self.onDidDiscoverPeripheral(peripheralScanData)
     }
     
-//    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {}
+    func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        self.onDidConnect(Peripheral(peripheral))
+    }
     
-//    func centralManager(
-//        _ central: CBCentralManager,
-//        didFailToConnect peripheral: CBPeripheral,
-//        error: Error?
-//    ) {}
+    func centralManager(
+        _ central: CBCentralManager,
+        didFailToConnect peripheral: CBPeripheral,
+        error: Error?
+    ) {
+        self.onDidFailToConnect(Peripheral(peripheral), error)
+    }
     
 //    func centralManager(
 //        _ central: CBCentralManager,

@@ -32,6 +32,12 @@ public class CentralManager {
             },
             onDidDiscoverPeripheral: { [weak self] peripheralScanData in
                 self?.onDidDiscoverPeripheral(peripheralScanData)
+            },
+            onDidConnect: { [weak self] peripheral in
+                self?.onDidConnect(peripheral)
+            },
+            onDidFailToConnect: { [weak self] peripheral, error in
+                self?.onDidFailToConnect(peripheral, error: error)
             }
         )
     }()
@@ -95,6 +101,10 @@ public class CentralManager {
         peripheralScanStreamContinuation.finish()
     }
     
+    public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) {
+        self.cbCentralManager.connect(peripheral, options: options)
+    }
+    
     // MARK: CBCentralManagingDelegate Callbacks
     
     private func onDidUpdateState() {
@@ -115,5 +125,12 @@ public class CentralManager {
             return
         }
         peripheralScanStreamContinuation.yield(peripheralScanData)
+    }
+    
+    private func onDidConnect(_ peripheral: Peripheral) {
+    }
+    
+    private func onDidFailToConnect(_ peripheral: Peripheral, error: Error?) {
+    
     }
 }

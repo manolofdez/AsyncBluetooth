@@ -51,5 +51,7 @@ class CBCentralManagerMock: CBCentralManaging {
         self.timer = nil
     }
     
+    public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) {
+    }
 }
 
