@@ -20,6 +20,7 @@ public class CentralManager {
     
     private var waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
+    private var connectToPeripheralContinuation: CheckedContinuation<Void, Error>?
     
     private var isScanning: Bool {
         self.peripheralScanStreamContinuation != nil
@@ -33,11 +34,11 @@ public class CentralManager {
             onDidDiscoverPeripheral: { [weak self] peripheralScanData in
                 self?.onDidDiscoverPeripheral(peripheralScanData)
             },
-            onDidConnect: { [weak self] peripheral in
-                self?.onDidConnect(peripheral)
+            onDidConnect: { [weak self] in
+                self?.onDidConnect()
             },
-            onDidFailToConnect: { [weak self] peripheral, error in
-                self?.onDidFailToConnect(peripheral, error: error)
+            onDidFailToConnect: { [weak self] error in
+                self?.onDidFailToConnect(error)
             }
         )
     }()
@@ -101,8 +102,15 @@ public class CentralManager {
         peripheralScanStreamContinuation.finish()
     }
     
-    public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) {
-        self.cbCentralManager.connect(peripheral, options: options)
+    public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
+        guard self.connectToPeripheralContinuation == nil else {
+            throw BluetoothError.connectingInProgress
+        }
+        
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            self.connectToPeripheralContinuation = continuation
+            self.cbCentralManager.connect(peripheral, options: options)
+        }
     }
     
     // MARK: CBCentralManagingDelegate Callbacks
@@ -127,10 +135,13 @@ public class CentralManager {
         peripheralScanStreamContinuation.yield(peripheralScanData)
     }
     
-    private func onDidConnect(_ peripheral: Peripheral) {
+    private func onDidConnect() {
+        self.connectToPeripheralContinuation?.resume()
+        self.connectToPeripheralContinuation = nil
     }
     
-    private func onDidFailToConnect(_ peripheral: Peripheral, error: Error?) {
-    
+    private func onDidFailToConnect(_ error: Error?) {
+        self.connectToPeripheralContinuation?.resume(throwing: BluetoothError.errorConnectingToPeripheral(error: error))
+        self.connectToPeripheralContinuation = nil
     }
 }

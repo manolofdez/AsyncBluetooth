@@ -5,14 +5,14 @@ import CoreBluetooth
 class CBCentralManagerCallbackProvider: NSObject {
     let onDidUpdateState: () -> Void
     let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
-    let onDidConnect: (Peripheral) -> Void
-    let onDidFailToConnect: (Peripheral, Error?) -> Void
+    let onDidConnect: () -> Void
+    let onDidFailToConnect: (Error?) -> Void
     
     init(
         onDidUpdateState: @escaping () -> Void,
         onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void,
-        onDidConnect: @escaping (Peripheral) -> Void,
-        onDidFailToConnect: @escaping (Peripheral, Error?) -> Void
+        onDidConnect: @escaping () -> Void,
+        onDidFailToConnect: @escaping (Error?) -> Void
     ) {
         self.onDidUpdateState = onDidUpdateState
         self.onDidDiscoverPeripheral = onDidDiscoverPeripheral
@@ -43,7 +43,7 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        self.onDidConnect(Peripheral(peripheral))
+        self.onDidConnect()
     }
     
     func centralManager(
@@ -51,7 +51,7 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
         didFailToConnect peripheral: CBPeripheral,
         error: Error?
     ) {
-        self.onDidFailToConnect(Peripheral(peripheral), error)
+        self.onDidFailToConnect(error)
     }
     
 //    func centralManager(
