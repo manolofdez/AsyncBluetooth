@@ -11,13 +11,14 @@ protocol CBCentralManaging: AnyObject {
     func scanForPeripherals(withServices serviceUUIDs: [CBUUID]?, options: [String : Any]?)
     func stopScan()
     func connect(_ peripheral: Peripheral, options: [String : Any]?)
+    func cancelPeripheralConnection(_ peripheral: Peripheral)
+    func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral]
+    func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral]
+    
+    static func supports(_ features: CBCentralManager.Feature) -> Bool
     
     // TODO: Implement
     
-//    open class func supports(_ features: CBCentralManager.Feature) -> Bool
-//    open func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [CBPeripheral]
-//    open func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [CBPeripheral]
-//    open func cancelPeripheralConnection(_ peripheral: CBPeripheral)
 //    open func registerForConnectionEvents(options: [CBConnectionEventMatchingOption : Any]? = nil)
 }
 

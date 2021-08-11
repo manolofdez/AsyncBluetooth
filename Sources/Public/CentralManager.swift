@@ -20,7 +20,8 @@ public class CentralManager {
     
     private var waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
-    private var connectToPeripheralContinuation: CheckedContinuation<Void, Error>?
+    private var connectToPeripheralContinuations = CheckedContinuationMap<UUID, Void, Error>()
+    private var cancelPeripheralConnectionContinuations = CheckedContinuationMap<UUID, Void, Error>()
     
     private var isScanning: Bool {
         self.peripheralScanStreamContinuation != nil
@@ -34,11 +35,14 @@ public class CentralManager {
             onDidDiscoverPeripheral: { [weak self] peripheralScanData in
                 self?.onDidDiscoverPeripheral(peripheralScanData)
             },
-            onDidConnect: { [weak self] in
-                self?.onDidConnect()
+            onDidConnect: { [weak self] peripheral in
+                self?.onDidConnect(peripheral)
             },
-            onDidFailToConnect: { [weak self] error in
-                self?.onDidFailToConnect(error)
+            onDidFailToConnect: { [weak self] peripheral, error in
+                self?.onDidFailToConnect(peripheral, error: error)
+            },
+            onDidDisconnectPeripheral: { [weak self] peripheral, error in
+                self?.onDidDisconnectPeripheral(peripheral, error: error)
             }
         )
     }()
@@ -62,9 +66,12 @@ public class CentralManager {
             Task {
                 // Note since this happens asynchronously, we check whether we have a valid Bluetooth state or not.
                 guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
+                    Self.logger.info("Waiting for bluetooth to be ready...")
+                    
                     await self.waitUntilReadyContinuations.append(continuation)
                     return
                 }
+                
                 continuation.resume(with: isBluetoothReadyResult)
             }
         }
@@ -99,18 +106,64 @@ public class CentralManager {
             Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
             return
         }
+        
         peripheralScanStreamContinuation.finish()
+        
+        Self.logger.info("Stopping scan...")
     }
     
     public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
-        guard self.connectToPeripheralContinuation == nil else {
-            throw BluetoothError.connectingInProgress
-        }
-        
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            self.connectToPeripheralContinuation = continuation
-            self.cbCentralManager.connect(peripheral, options: options)
+            Task {
+                do {
+                    try await self.connectToPeripheralContinuations.addContinuation(
+                        continuation, forKey: peripheral.identifier
+                    )
+                } catch {
+                    Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
+                    
+                    continuation.resume(throwing: BluetoothError.connectingInProgress)
+                    return
+                }
+                
+                Self.logger.info("Connecting to \(peripheral.identifier)")
+                
+                self.cbCentralManager.connect(peripheral, options: options)
+            }
         }
+    }
+    
+    public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Task {
+                do {
+                    try await self.cancelPeripheralConnectionContinuations.addContinuation(
+                        continuation, forKey: peripheral.identifier
+                    )
+                } catch {
+                    Self.logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
+
+                    continuation.resume(throwing: BluetoothError.disconnectingInProgress)
+                    return
+                }
+                
+                Self.logger.info("Disconnecting from \(peripheral.identifier)")
+                
+                self.cbCentralManager.cancelPeripheralConnection(peripheral)
+            }
+        }
+    }
+    
+    public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral] {
+        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers)
+    }
+    
+    public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
+        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs)
+    }
+    
+    public static func supports(_ features: CBCentralManager.Feature) -> Bool {
+        CBCentralManager.supports(features)
     }
     
     // MARK: CBCentralManagingDelegate Callbacks
@@ -133,15 +186,55 @@ public class CentralManager {
             return
         }
         peripheralScanStreamContinuation.yield(peripheralScanData)
+        
+        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
     }
     
-    private func onDidConnect() {
-        self.connectToPeripheralContinuation?.resume()
-        self.connectToPeripheralContinuation = nil
+    private func onDidConnect(_ peripheral: Peripheral) {
+        Task {
+            Self.logger.info("Connected to peripheral \(peripheral.identifier)")
+            
+            do {
+                try await self.connectToPeripheralContinuations.resumeContinuation(
+                    .success(()), withKey: peripheral.identifier
+                )
+            } catch {
+                Self.logger.error("Received onDidConnect without a continuation!")
+            }
+        }
     }
     
-    private func onDidFailToConnect(_ error: Error?) {
-        self.connectToPeripheralContinuation?.resume(throwing: BluetoothError.errorConnectingToPeripheral(error: error))
-        self.connectToPeripheralContinuation = nil
+    private func onDidFailToConnect(_ peripheral: Peripheral, error: Error?) {
+        Task {
+            Self.logger.warning("Failed to connect to peripheral \(peripheral.identifier) - error: \(error?.localizedDescription ?? "")")
+            
+            do {
+                try await self.connectToPeripheralContinuations.resumeContinuation(
+                    .failure(BluetoothError.errorConnectingToPeripheral(error: error)), withKey: peripheral.identifier
+                )
+            } catch {
+                Self.logger.error("Received onDidFailToConnect without a continuation!")
+            }
+        }
+    }
+    
+    private func onDidDisconnectPeripheral(_ peripheral: Peripheral, error: Error?) {
+        let result: Result<Void, Error>
+        if let error = error {
+            result = .failure(error)
+        } else {
+            result = .success(())
+        }
+        
+        Task {
+            do {
+                try await self.cancelPeripheralConnectionContinuations.resumeContinuation(
+                    result, withKey: peripheral.identifier
+                )
+                Self.logger.info("Disconnected from \(peripheral.identifier)")
+            } catch {
+                Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
+            }
+        }
     }
 }

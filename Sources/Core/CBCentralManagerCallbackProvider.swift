@@ -5,19 +5,22 @@ import CoreBluetooth
 class CBCentralManagerCallbackProvider: NSObject {
     let onDidUpdateState: () -> Void
     let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
-    let onDidConnect: () -> Void
-    let onDidFailToConnect: (Error?) -> Void
+    let onDidConnect: (Peripheral) -> Void
+    let onDidFailToConnect: (Peripheral, Error?) -> Void
+    let onDidDisconnectPeripheral: (Peripheral, Error?) -> Void
     
     init(
         onDidUpdateState: @escaping () -> Void,
         onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void,
-        onDidConnect: @escaping () -> Void,
-        onDidFailToConnect: @escaping (Error?) -> Void
+        onDidConnect: @escaping (Peripheral) -> Void,
+        onDidFailToConnect: @escaping (Peripheral, Error?) -> Void,
+        onDidDisconnectPeripheral: @escaping (Peripheral, Error?) -> Void
     ) {
         self.onDidUpdateState = onDidUpdateState
         self.onDidDiscoverPeripheral = onDidDiscoverPeripheral
         self.onDidConnect = onDidConnect
         self.onDidFailToConnect = onDidFailToConnect
+        self.onDidDisconnectPeripheral = onDidDisconnectPeripheral
     }
 }
 
@@ -25,8 +28,6 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         self.onDidUpdateState()
     }
-    
-//    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {}
     
     func centralManager(
         _ central: CBCentralManager,
@@ -43,7 +44,7 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        self.onDidConnect()
+        self.onDidConnect(Peripheral(peripheral))
     }
     
     func centralManager(
@@ -51,20 +52,14 @@ extension CBCentralManagerCallbackProvider: CBCentralManagerDelegate {
         didFailToConnect peripheral: CBPeripheral,
         error: Error?
     ) {
-        self.onDidFailToConnect(error)
+        self.onDidFailToConnect(Peripheral(peripheral), error)
     }
     
-//    func centralManager(
-//        _ central: CBCentralManager,
-//        didDisconnectPeripheral peripheral: CBPeripheral,
-//        error: Error?
-//    ) {}
-    
-//    func centralManager(
-//        _ central: CBCentralManager,
-//        connectionEventDidOccur event: CBConnectionEvent,
-//        for peripheral: CBPeripheral
-//    ) {}
-    
-//    func centralManager(_ central: CBCentralManager, didUpdateANCSAuthorizationFor peripheral: CBPeripheral) {}
+    func centralManager(
+        _ central: CBCentralManager,
+        didDisconnectPeripheral peripheral: CBPeripheral,
+        error: Error?
+    ) {
+        self.onDidDisconnectPeripheral(Peripheral(peripheral), error)
+    }
 }

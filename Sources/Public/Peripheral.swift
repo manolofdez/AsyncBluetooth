@@ -5,13 +5,15 @@ import CoreBluetooth
 public struct Peripheral {
     let cbPeripheral: CBPeripheral
     
+    var name: String? {
+        self.cbPeripheral.name
+    }
+    
+    var identifier: UUID {
+        self.cbPeripheral.identifier
+    }
+    
     init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
-    }
-}
-
-extension Peripheral: PeripheralType {
-    public var name: String? {
-        self.cbPeripheral.name
     }
 }
