@@ -6,15 +6,15 @@ class CBCentralManagerDelegateWrapper: NSObject {
     private let onDidUpdateState: () -> Void
     private let onDidDiscoverPeripheral: (PeripheralScanData) -> Void
     private let onDidConnect: (CBPeripheral) -> Void
-    private let onDidFailToConnect: (CBPeripheral, Error?) -> Void
-    private let onDidDisconnectPeripheral: (CBPeripheral, Error?) -> Void
+    private let onDidFailToConnect: CBCallback<CBPeripheral>
+    private let onDidDisconnectPeripheral: CBCallback<CBPeripheral>
     
     init(
         onDidUpdateState: @escaping () -> Void,
         onDidDiscoverPeripheral: @escaping (PeripheralScanData) -> Void,
         onDidConnect: @escaping (CBPeripheral) -> Void,
-        onDidFailToConnect: @escaping (CBPeripheral, Error?) -> Void,
-        onDidDisconnectPeripheral: @escaping (CBPeripheral, Error?) -> Void
+        onDidFailToConnect: @escaping CBCallback<CBPeripheral>,
+        onDidDisconnectPeripheral: @escaping CBCallback<CBPeripheral>
     ) {
         self.onDidUpdateState = onDidUpdateState
         self.onDidDiscoverPeripheral = onDidDiscoverPeripheral

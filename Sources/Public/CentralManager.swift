@@ -27,7 +27,7 @@ public class CentralManager {
         self.peripheralScanStreamContinuation != nil
     }
     
-    private lazy var cbCentralManagerDelegate: CBCentralManagerDelegateWrapper = {
+    private lazy var cbCentralManagerDelegate: CBCentralManagerDelegate = {
         CBCentralManagerDelegateWrapper(
             onDidUpdateState: { [weak self] in
                 self?.onDidUpdateState()
