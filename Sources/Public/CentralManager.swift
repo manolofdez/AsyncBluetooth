@@ -18,10 +18,10 @@ public class CentralManager {
     
     private let cbCentralManager: CBCentralManager
     
-    private var waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
+    private let waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
+    private let connectToPeripheralContinuations = CheckedContinuationMap<UUID, Void, Error>()
+    private let cancelPeripheralConnectionContinuations = CheckedContinuationMap<UUID, Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
-    private var connectToPeripheralContinuations = CheckedContinuationMap<UUID, Void, Error>()
-    private var cancelPeripheralConnectionContinuations = CheckedContinuationMap<UUID, Void, Error>()
     
     private var isScanning: Bool {
         self.peripheralScanStreamContinuation != nil
@@ -72,6 +72,7 @@ public class CentralManager {
         }
     }
     
+    // TODO: might need to be hidden behind an actor
     public func scanForPeripherals(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil

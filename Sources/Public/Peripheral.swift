@@ -20,14 +20,17 @@ public class Peripheral {
         self.cbPeripheral.identifier
     }
     
-    private var readRSSIContinuation = CheckedContinuationStorage<NSNumber, Error>()
+    private let readRSSIContinuation = CheckedContinuationStorage<NSNumber, Error>()
+    private let discoverServiceContinuation = CheckedContinuationStorage<Void, Error>()
     
     private lazy var cbPeripheralDelegate: CBPeripheralDelegate = {
         CBPeripheralDelegateWrapper(
             onDidReadRSSI: { [weak self] rssi, error in
                 self?.onDidReadRSSI(rssi: rssi, error: error)
             },
-            onDidDiscoverServices: { error in },
+            onDidDiscoverServices: { [weak self] error in
+                self?.onDidDiscoverServices(error: error)
+            },
             onDidDiscoverIncludedServices: { service, error in },
             onDidDiscoverCharacteristics: { service, error in },
             onDidUpdateValueForCharacteristic: { characteristic, error in },
@@ -59,7 +62,19 @@ public class Peripheral {
         }
     }
     
-//    func discoverServices(_ serviceUUIDs: [CBUUID]?) {}
+    func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            Task {
+                do {
+                    try await self.discoverServiceContinuation.setContinuation(continuation)
+                } catch {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                self.cbPeripheral.discoverServices(serviceUUIDs)
+            }
+        }
+    }
 //    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) {}
 //    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) {}
 //    func readValue(for characteristic: Characteristic) {}
@@ -82,6 +97,17 @@ public class Peripheral {
                 try await self.readRSSIContinuation.resume(result)
             } catch {
                 Self.logger.error("Received RSSI value without a continuation")
+            }
+        }
+    }
+    
+    private func onDidDiscoverServices(error: Error?) {
+        Task {
+            do {
+                let result = CallbackUtils.result(for: (), error: error)
+                try await self.discoverServiceContinuation.resume(result)
+            } catch {
+                Self.logger.error("Received discover services callback without a continuation")
             }
         }
     }
