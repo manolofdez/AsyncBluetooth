@@ -215,15 +215,9 @@ public class CentralManager {
     }
     
     private func onDidDisconnectPeripheral(_ peripheral: CBPeripheral, error: Error?) {
-        let result: Result<Void, Error>
-        if let error = error {
-            result = .failure(error)
-        } else {
-            result = .success(())
-        }
-        
         Task {
             do {
+                let result = CallbackUtils.result(for: (), error: error)
                 try await self.cancelPeripheralConnectionContinuations.resumeContinuation(
                     result, withKey: peripheral.identifier
                 )

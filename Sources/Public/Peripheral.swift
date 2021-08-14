@@ -1,8 +1,15 @@
 import Foundation
 import CoreBluetooth
+import os.log
 
 /// A wrapper around `CBPeripheral`, used to interact with a remote peripheral.
-public struct Peripheral {
+public class Peripheral {
+    
+    private static let logger = Logger(
+        subsystem: Bundle(for: Peripheral.self).bundleIdentifier ?? "",
+        category: "peripheral"
+    )
+    
     let cbPeripheral: CBPeripheral
     
     var name: String? {
@@ -13,9 +20,13 @@ public struct Peripheral {
         self.cbPeripheral.identifier
     }
     
+    private var readRSSIContinuation = CheckedContinuationStorage<NSNumber, Error>()
+    
     private lazy var cbPeripheralDelegate: CBPeripheralDelegate = {
         CBPeripheralDelegateWrapper(
-            onDidReadRSSI: { rssi, error in },
+            onDidReadRSSI: { [weak self] rssi, error in
+                self?.onDidReadRSSI(rssi: rssi, error: error)
+            },
             onDidDiscoverServices: { error in },
             onDidDiscoverIncludedServices: { service, error in },
             onDidDiscoverCharacteristics: { service, error in },
@@ -34,7 +45,20 @@ public struct Peripheral {
         self.cbPeripheral = cbPeripheral
     }
     
-//    func readRSSI() {}
+    public func readRSSI() async throws -> NSNumber {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<NSNumber, Error>) in
+            Task {
+                do {
+                    try await self.readRSSIContinuation.setContinuation(continuation)
+                } catch {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                self.cbPeripheral.readRSSI()
+            }
+        }
+    }
+    
 //    func discoverServices(_ serviceUUIDs: [CBUUID]?) {}
 //    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) {}
 //    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) {}
@@ -48,4 +72,17 @@ public struct Peripheral {
 //
 //    @available(iOS 11.0, *)
 //    func openL2CAPChannel(_ PSM: CBL2CAPPSM) {}
+    
+    // MARK: CBPeripheralDelegate Callbacks
+    
+    private func onDidReadRSSI(rssi: NSNumber, error: Error?) {
+        Task {
+            do {
+                let result = CallbackUtils.result(for: rssi, error: error)
+                try await self.readRSSIContinuation.resume(result)
+            } catch {
+                Self.logger.error("Received RSSI value without a continuation")
+            }
+        }
+    }
 }
