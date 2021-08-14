@@ -16,7 +16,7 @@ public class CentralManager {
         self.cbCentralManager.state
     }
     
-    private let cbCentralManager: CBCentralManaging
+    private let cbCentralManager: CBCentralManager
     
     private var waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
@@ -27,8 +27,8 @@ public class CentralManager {
         self.peripheralScanStreamContinuation != nil
     }
     
-    private lazy var cbCentralManagerCallbackProvider: CBCentralManagerCallbackProvider = {
-        CBCentralManagerCallbackProvider(
+    private lazy var cbCentralManagerDelegate: CBCentralManagerDelegateWrapper = {
+        CBCentralManagerDelegateWrapper(
             onDidUpdateState: { [weak self] in
                 self?.onDidUpdateState()
             },
@@ -49,14 +49,9 @@ public class CentralManager {
     
     // MARK: Constructors
 
-    public convenience init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
-        let cbCentralManager = CBCentralManager(delegate: nil, queue: dispatchQueue, options: options)
-        self.init(cbCentralManager: cbCentralManager)
-    }
-    
-    init(cbCentralManager: CBCentralManaging) {
-        self.cbCentralManager = cbCentralManager
-        self.cbCentralManager.delegate = self.cbCentralManagerCallbackProvider
+    public init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
+        self.cbCentralManager = CBCentralManager(delegate: nil, queue: dispatchQueue, options: options)
+        self.cbCentralManager.delegate = self.cbCentralManagerDelegate
     }
     
     // MARK: Public
@@ -128,7 +123,7 @@ public class CentralManager {
                 
                 Self.logger.info("Connecting to \(peripheral.identifier)")
                 
-                self.cbCentralManager.connect(peripheral, options: options)
+                self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
             }
         }
     }
@@ -149,19 +144,20 @@ public class CentralManager {
                 
                 Self.logger.info("Disconnecting from \(peripheral.identifier)")
                 
-                self.cbCentralManager.cancelPeripheralConnection(peripheral)
+                self.cbCentralManager.cancelPeripheralConnection(peripheral.cbPeripheral)
             }
         }
     }
     
     public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral] {
-        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers)
+        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { Peripheral($0) }
     }
     
     public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
-        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs)
+        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0) }
     }
-    
+
+    @available(macOS, unavailable)
     public static func supports(_ features: CBCentralManager.Feature) -> Bool {
         CBCentralManager.supports(features)
     }
@@ -190,7 +186,7 @@ public class CentralManager {
         Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
     }
     
-    private func onDidConnect(_ peripheral: Peripheral) {
+    private func onDidConnect(_ peripheral: CBPeripheral) {
         Task {
             Self.logger.info("Connected to peripheral \(peripheral.identifier)")
             
@@ -204,7 +200,7 @@ public class CentralManager {
         }
     }
     
-    private func onDidFailToConnect(_ peripheral: Peripheral, error: Error?) {
+    private func onDidFailToConnect(_ peripheral: CBPeripheral, error: Error?) {
         Task {
             Self.logger.warning("Failed to connect to peripheral \(peripheral.identifier) - error: \(error?.localizedDescription ?? "")")
             
@@ -218,7 +214,7 @@ public class CentralManager {
         }
     }
     
-    private func onDidDisconnectPeripheral(_ peripheral: Peripheral, error: Error?) {
+    private func onDidDisconnectPeripheral(_ peripheral: CBPeripheral, error: Error?) {
         let result: Result<Void, Error>
         if let error = error {
             result = .failure(error)
