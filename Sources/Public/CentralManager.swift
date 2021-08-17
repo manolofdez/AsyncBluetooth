@@ -18,9 +18,9 @@ public class CentralManager {
     
     private let cbCentralManager: CBCentralManager
     
-    private let waitUntilReadyContinuations = CheckedContinuationList<Void, Error>()
-    private let connectToPeripheralContinuations = CheckedContinuationMap<UUID, Void, Error>()
-    private let cancelPeripheralConnectionContinuations = CheckedContinuationMap<UUID, Void, Error>()
+    private let waitUntilReadyContinuations = CheckedContinuationListStorage<Void, Error>()
+    private let connectToPeripheralContinuations = CheckedContinuationMapStorage<UUID, Void, Error>()
+    private let cancelPeripheralConnectionContinuations = CheckedContinuationMapStorage<UUID, Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
     
     private var isScanning: Bool {

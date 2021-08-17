@@ -1,7 +1,7 @@
 import Foundation
 
 /// Actor that provides a safe way to add to and resume checked continuations by an identifier (key).
-actor CheckedContinuationMap<K, V, E> where K: Hashable, E: Error {
+actor CheckedContinuationMapStorage<K, V, E> where K: Hashable, E: Error {
     
     enum Error: Swift.Error {
         case continuationAlreadyExistsForKey(key: K)
@@ -28,6 +28,25 @@ actor CheckedContinuationMap<K, V, E> where K: Hashable, E: Error {
     private func contains(key: K) -> Bool {
         self.continuations.contains { currentKey, currentContinuation in
             key == currentKey
+        }
+    }
+}
+
+extension CheckedContinuationMapStorage where E == Swift.Error {
+    /// Adds a new continuation, and performs the given block.
+    /// - Note: The continuation is not resumed.
+    func perform(
+        withKey key: K,
+        block: @escaping () -> Void
+    ) async throws -> V {
+        try await withCheckedThrowingContinuation { continuation in
+            do {
+                try self.addContinuation(continuation, forKey: key)
+            } catch {
+                continuation.resume(throwing: error)
+                return
+            }
+            block()
         }
     }
 }

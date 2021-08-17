@@ -26,3 +26,19 @@ actor CheckedContinuationStorage<T, E> where E: Error {
         self.continuation = nil
     }
 }
+
+extension CheckedContinuationStorage where E == Swift.Error {
+    /// Sets a new continuation, and performs the given block.
+    /// - Note: The continuation is not resumed.
+    func perform(block: @escaping () -> Void) async throws -> T {
+        try await withCheckedThrowingContinuation { continuation in
+            do {
+                try self.setContinuation(continuation)
+            } catch {
+                continuation.resume(throwing: error)
+                return
+            }
+            block()
+        }
+    }
+}

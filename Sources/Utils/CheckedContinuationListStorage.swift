@@ -1,7 +1,7 @@
 import Foundation
 
 /// Actor that provides a safe way to add to and resume a list of checked continuations.
-actor CheckedContinuationList<T, E> where E: Error {
+actor CheckedContinuationListStorage<T, E> where E: Error {
     
     private var continuations: [CheckedContinuation<T, E>] = []
     

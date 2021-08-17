@@ -20,8 +20,10 @@ public class Peripheral {
         self.cbPeripheral.identifier
     }
     
-    private let readRSSIContinuation = CheckedContinuationStorage<NSNumber, Error>()
-    private let discoverServiceContinuation = CheckedContinuationStorage<Void, Error>()
+    private let readRSSIStorage = CheckedContinuationStorage<NSNumber, Error>()
+    private let discoverServiceStorage = CheckedContinuationStorage<Void, Error>()
+    private let discoverIncludedServicesStorage = CheckedContinuationMapStorage<CBUUID, Void, Error>()
+    private let discoverCharacteristicsStorage = CheckedContinuationMapStorage<CBUUID, Void, Error>()
     
     private lazy var cbPeripheralDelegate: CBPeripheralDelegate = {
         CBPeripheralDelegateWrapper(
@@ -31,8 +33,12 @@ public class Peripheral {
             onDidDiscoverServices: { [weak self] error in
                 self?.onDidDiscoverServices(error: error)
             },
-            onDidDiscoverIncludedServices: { service, error in },
-            onDidDiscoverCharacteristics: { service, error in },
+            onDidDiscoverIncludedServices: { [weak self] service, error in
+                self?.onDidDiscoverIncludedServices(service: service, error: error)
+            },
+            onDidDiscoverCharacteristics: { [weak self] service, error in
+                self?.onDidDiscoverCharacteristics(service: service, error: error)
+            },
             onDidUpdateValueForCharacteristic: { characteristic, error in },
             onDidWriteValueForCharacteristic: { characteristic, error in },
             onDidUpdateNotificationState: { characteristic, error in },
@@ -49,34 +55,28 @@ public class Peripheral {
     }
     
     public func readRSSI() async throws -> NSNumber {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<NSNumber, Error>) in
-            Task {
-                do {
-                    try await self.readRSSIContinuation.setContinuation(continuation)
-                } catch {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                self.cbPeripheral.readRSSI()
-            }
+        try await self.readRSSIStorage.perform { [weak self] in
+            self?.cbPeripheral.readRSSI()
         }
     }
     
     func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            Task {
-                do {
-                    try await self.discoverServiceContinuation.setContinuation(continuation)
-                } catch {
-                    continuation.resume(throwing: error)
-                    return
-                }
-                self.cbPeripheral.discoverServices(serviceUUIDs)
-            }
+        try await self.discoverServiceStorage.perform { [weak self] in
+            self?.cbPeripheral.discoverServices(serviceUUIDs)
         }
     }
-//    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) {}
-//    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) {}
+    
+    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService) async throws {
+        try await self.discoverIncludedServicesStorage.perform(withKey: service.uuid) { [weak self] in
+            self?.cbPeripheral.discoverIncludedServices(includedServiceUUIDs, for: service)
+        }
+    }
+    
+    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService) async throws {
+        try await self.discoverCharacteristicsStorage.perform(withKey: service.uuid) { [weak self] in
+            self?.cbPeripheral.discoverCharacteristics(characteristicUUIDs, for: service)
+        }
+    }
 //    func readValue(for characteristic: Characteristic) {}
 //    func maximumWriteValueLength(for type: CBCharacteristicWriteType) -> Int {}
 //    func writeValue(_ data: Data, for characteristic: Characteristic, type: CBCharacteristicWriteType) {}
@@ -94,9 +94,9 @@ public class Peripheral {
         Task {
             do {
                 let result = CallbackUtils.result(for: rssi, error: error)
-                try await self.readRSSIContinuation.resume(result)
+                try await self.readRSSIStorage.resume(result)
             } catch {
-                Self.logger.error("Received RSSI value without a continuation")
+                Self.logger.error("Received ReadRSSI response without a continuation")
             }
         }
     }
@@ -105,9 +105,35 @@ public class Peripheral {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.discoverServiceContinuation.resume(result)
+                try await self.discoverServiceStorage.resume(result)
             } catch {
-                Self.logger.error("Received discover services callback without a continuation")
+                Self.logger.warning("Received DiscoverServices response without a continuation")
+            }
+        }
+    }
+    
+    private func onDidDiscoverIncludedServices(service: CBService, error: Error?) {
+        Task {
+            do {
+                let result = CallbackUtils.result(for: (), error: error)
+                try await self.discoverIncludedServicesStorage.resumeContinuation(
+                    result, withKey: service.uuid
+                )
+            } catch {
+                Self.logger.warning("Received DiscoverIncludedServices response without a continuation")
+            }
+        }
+    }
+    
+    private func onDidDiscoverCharacteristics(service: CBService, error: Error?) {
+        Task {
+            do {
+                let result = CallbackUtils.result(for: (), error: error)
+                try await self.discoverCharacteristicsStorage.resumeContinuation(
+                    result, withKey: service.uuid
+                )
+            } catch {
+                Self.logger.warning("Received DiscoverCharacteristics result without a continuation")
             }
         }
     }
