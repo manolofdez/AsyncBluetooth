@@ -13,7 +13,6 @@ class CBPeripheralDelegateWrapper: NSObject {
     private let onDidDiscoverDescriptors: CBCallback<CBCharacteristic>
     private let onDidUpdateValueForDescriptor: CBCallback<CBDescriptor>
     private let onDidWriteValueForDescriptor: CBCallback<CBDescriptor>
-    private let onPeripheralIsReadyToSendWriteWithoutResponse: () -> Void
     private let onDidOpenChannel: CBCallback<CBL2CAPChannel?>
     
     init(
@@ -27,7 +26,6 @@ class CBPeripheralDelegateWrapper: NSObject {
         onDidDiscoverDescriptors: @escaping CBCallback<CBCharacteristic>,
         onDidUpdateValueForDescriptor: @escaping CBCallback<CBDescriptor>,
         onDidWriteValueForDescriptor: @escaping CBCallback<CBDescriptor>,
-        onPeripheralIsReadyToSendWriteWithoutResponse: @escaping () -> Void,
         onDidOpenChannel: @escaping CBCallback<CBL2CAPChannel?>
     ) {
         self.onDidReadRSSI = onDidReadRSSI
@@ -40,7 +38,6 @@ class CBPeripheralDelegateWrapper: NSObject {
         self.onDidDiscoverDescriptors = onDidDiscoverDescriptors
         self.onDidUpdateValueForDescriptor = onDidUpdateValueForDescriptor
         self.onDidWriteValueForDescriptor = onDidWriteValueForDescriptor
-        self.onPeripheralIsReadyToSendWriteWithoutResponse = onPeripheralIsReadyToSendWriteWithoutResponse
         self.onDidOpenChannel = onDidOpenChannel
 
         super.init()
@@ -96,10 +93,6 @@ extension CBPeripheralDelegateWrapper: CBPeripheralDelegate {
         self.onDidWriteValueForDescriptor(descriptor, error)
     }
     
-    func peripheralIsReady(toSendWriteWithoutResponse peripheral: CBPeripheral) {
-        self.onPeripheralIsReadyToSendWriteWithoutResponse()
-    }
-
     func peripheral(_ peripheral: CBPeripheral, didOpen channel: CBL2CAPChannel?, error: Error?) {
         self.onDidOpenChannel(channel, error)
     }
