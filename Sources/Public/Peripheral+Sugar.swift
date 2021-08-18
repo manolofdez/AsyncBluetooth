@@ -19,11 +19,31 @@ extension Peripheral {
             return nil
         }
         
-        guard let parsedValue = Value.fromData(data) else {
+        guard let value = Value.fromData(data) else {
             throw BluetoothError.unableToParseCharacteristicValue
         }
         
-        return parsedValue
+        return value
+    }
+    
+    public func writeValue<Value>(
+        _ value: Value,
+        forCharacteristicWithUUID characteristicUUID: CBUUID,
+        ofServiceWithUUID serviceUUID: CBUUID,
+        type: CBCharacteristicWriteType = .withResponse
+    ) async throws where Value: PeripheralDataConvertible {
+        guard let characteristic = try await self.findCharacteristic(
+            uuid: characteristicUUID,
+            ofServiceWithUUID: serviceUUID
+        ) else {
+            throw BluetoothError.characteristicNotFound
+        }
+
+        guard let data = value.toData() else {
+            throw BluetoothError.unableToConvertValueToData
+        }
+        
+        try await self.writeValue(data, for: characteristic, type: type)
     }
     
     private func findCharacteristic(

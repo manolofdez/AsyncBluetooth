@@ -127,7 +127,7 @@ public class Peripheral {
         }
     }
     
-    func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
+    public func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
         try await self.setNotifyValueStorage.perform(withKey: characteristic.uuid) { [weak self] in
             self?.cbPeripheral.setNotifyValue(enabled, for: characteristic)
         }
@@ -152,7 +152,7 @@ public class Peripheral {
     }
 
     @available(iOS 11.0, *)
-    func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
+    public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
         try await self.openL2CAPChannelStorage.perform { [weak self] in 
             self?.cbPeripheral.openL2CAPChannel(PSM)
         }

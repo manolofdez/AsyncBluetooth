@@ -8,4 +8,5 @@ public enum BluetoothError: Error {
     case errorConnectingToPeripheral(error: Error?)
     case characteristicNotFound
     case unableToParseCharacteristicValue
+    case unableToConvertValueToData
 }
