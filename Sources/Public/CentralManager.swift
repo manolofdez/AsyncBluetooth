@@ -105,16 +105,16 @@ public class CentralManager {
             Task {
                 do {
                     try await self.connectToPeripheralContinuations.addContinuation(
-                        continuation, forKey: peripheral.identifier
+                        continuation, forKey: peripheral.id
                     )
                 } catch {
-                    Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
+                    Self.logger.error("Unable to connect to \(peripheral.id) because a connection attempt is already in progress")
                     
                     continuation.resume(throwing: BluetoothError.connectingInProgress)
                     return
                 }
                 
-                Self.logger.info("Connecting to \(peripheral.identifier)")
+                Self.logger.info("Connecting to \(peripheral.id)")
                 
                 self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
             }
@@ -126,16 +126,16 @@ public class CentralManager {
             Task {
                 do {
                     try await self.cancelPeripheralConnectionContinuations.addContinuation(
-                        continuation, forKey: peripheral.identifier
+                        continuation, forKey: peripheral.id
                     )
                 } catch {
-                    Self.logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
+                    Self.logger.error("Unable to disconnect from \(peripheral.id) because a disconnection attempt is already in progress")
 
                     continuation.resume(throwing: BluetoothError.disconnectingInProgress)
                     return
                 }
                 
-                Self.logger.info("Disconnecting from \(peripheral.identifier)")
+                Self.logger.info("Disconnecting from \(peripheral.id)")
                 
                 self.cbCentralManager.cancelPeripheralConnection(peripheral.cbPeripheral)
             }
@@ -197,7 +197,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         }
         peripheralScanStreamContinuation.yield(peripheralScanData)
         
-        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
+        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.id)")
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {

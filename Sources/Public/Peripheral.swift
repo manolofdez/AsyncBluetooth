@@ -19,7 +19,7 @@ public class Peripheral {
         category: "peripheral"
     )
     
-    public lazy var characteristicValueUpdatedPublisher: AnyPublisher<CharacteristicValueUpdatedEventData, Never> = {
+    public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
         self.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }()
     
@@ -29,11 +29,11 @@ public class Peripheral {
         self.cbPeripheral.name
     }
     
-    var identifier: UUID {
-        self.cbPeripheral.identifier
+    public var discoveredServices: [Service]? {
+        self.cbPeripheral.services?.map { Service($0) }
     }
     
-    private let characteristicValueUpdatedSubject = PassthroughSubject<CharacteristicValueUpdatedEventData, Never>()
+    private let characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
     
     private let readRSSIStorage = CheckedContinuationStorage<NSNumber, Error>()
     private let discoverServiceStorage = CheckedContinuationStorage<Void, Error>()
@@ -206,7 +206,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
                 return
             }
             self.peripheral?.characteristicValueUpdatedSubject.send(
-                CharacteristicValueUpdatedEventData(characteristic: characteristic)
+                Characteristic(characteristic)
             )
         }
     }
