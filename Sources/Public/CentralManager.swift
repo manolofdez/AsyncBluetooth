@@ -7,6 +7,14 @@ public class CentralManager {
     
     private typealias Utils = CentralManagerUtils
     
+    fileprivate class DelegateWrapper: NSObject {
+        private weak var centralManager: CentralManager?
+        
+        init(owner centralManager: CentralManager) {
+            self.centralManager = centralManager
+        }
+    }
+    
     private static let logger = Logger(
         subsystem: Bundle(for: CentralManager.self).bundleIdentifier ?? "",
         category: "centralManager"
@@ -28,23 +36,7 @@ public class CentralManager {
     }
     
     private lazy var cbCentralManagerDelegate: CBCentralManagerDelegate = {
-        CBCentralManagerDelegateWrapper(
-            onDidUpdateState: { [weak self] in
-                self?.onDidUpdateState()
-            },
-            onDidDiscoverPeripheral: { [weak self] peripheralScanData in
-                self?.onDidDiscoverPeripheral(peripheralScanData)
-            },
-            onDidConnect: { [weak self] peripheral in
-                self?.onDidConnect(peripheral)
-            },
-            onDidFailToConnect: { [weak self] peripheral, error in
-                self?.onDidFailToConnect(peripheral, error: error)
-            },
-            onDidDisconnectPeripheral: { [weak self] peripheral, error in
-                self?.onDidDisconnectPeripheral(peripheral, error: error)
-            }
-        )
+        DelegateWrapper(owner: self)
     }()
     
     // MARK: Constructors
@@ -162,23 +154,44 @@ public class CentralManager {
     public static func supports(_ features: CBCentralManager.Feature) -> Bool {
         CBCentralManager.supports(features)
     }
+}
+
+// MARK: CBCentralManagerDelegate
+
+extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
+    private typealias Utils = CentralManagerUtils
     
-    // MARK: CBCentralManagingDelegate Callbacks
+    private static var logger: Logger = {
+        CentralManager.logger
+    }()
     
-    private func onDidUpdateState() {
-        if self.bluetoothState != .poweredOn && self.isScanning {
-            self.stopScan()
+    func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        guard let centralManager = self.centralManager else { return }
+        
+        if centralManager.bluetoothState != .poweredOn && centralManager.isScanning {
+            centralManager.stopScan()
         }
         
         Task {
-            guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else { return }
+            guard let isBluetoothReadyResult = Utils.isBluetoothReady(centralManager.bluetoothState) else { return }
 
-            await self.waitUntilReadyContinuations.resumeAll(isBluetoothReadyResult)
+            await centralManager.waitUntilReadyContinuations.resumeAll(isBluetoothReadyResult)
         }
     }
     
-    private func onDidDiscoverPeripheral(_ peripheralScanData: PeripheralScanData) {
-        guard let peripheralScanStreamContinuation = peripheralScanStreamContinuation else {
+    func centralManager(
+        _ cbCentralManager: CBCentralManager,
+        didDiscover cbPeripheral: CBPeripheral,
+        advertisementData: [String : Any],
+        rssi RSSI: NSNumber
+    ) {
+        let peripheralScanData = PeripheralScanData(
+            peripheral: Peripheral(cbPeripheral),
+            advertisementData: advertisementData,
+            rssi: RSSI
+        )
+
+        guard let peripheralScanStreamContinuation = self.centralManager?.peripheralScanStreamContinuation else {
             Self.logger.info("Ignoring peripheral '\(peripheralScanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
             return
         }
@@ -187,12 +200,12 @@ public class CentralManager {
         Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
     }
     
-    private func onDidConnect(_ peripheral: CBPeripheral) {
+    func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task {
             Self.logger.info("Connected to peripheral \(peripheral.identifier)")
             
             do {
-                try await self.connectToPeripheralContinuations.resumeContinuation(
+                try await self.centralManager?.connectToPeripheralContinuations.resumeContinuation(
                     .success(()), withKey: peripheral.identifier
                 )
             } catch {
@@ -201,12 +214,18 @@ public class CentralManager {
         }
     }
     
-    private func onDidFailToConnect(_ peripheral: CBPeripheral, error: Error?) {
+    func centralManager(
+        _ cbCentralManager: CBCentralManager,
+        didFailToConnect peripheral: CBPeripheral,
+        error: Error?
+    ) {
         Task {
-            Self.logger.warning("Failed to connect to peripheral \(peripheral.identifier) - error: \(error?.localizedDescription ?? "")")
+            Self.logger.warning(
+                "Failed to connect to peripheral \(peripheral.identifier) - error: \(error?.localizedDescription ?? "")"
+            )
             
             do {
-                try await self.connectToPeripheralContinuations.resumeContinuation(
+                try await self.centralManager?.connectToPeripheralContinuations.resumeContinuation(
                     .failure(BluetoothError.errorConnectingToPeripheral(error: error)), withKey: peripheral.identifier
                 )
             } catch {
@@ -215,11 +234,15 @@ public class CentralManager {
         }
     }
     
-    private func onDidDisconnectPeripheral(_ peripheral: CBPeripheral, error: Error?) {
+    func centralManager(
+        _ cbCentralManager: CBCentralManager,
+        didDisconnectPeripheral peripheral: CBPeripheral,
+        error: Error?
+    ) {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.cancelPeripheralConnectionContinuations.resumeContinuation(
+                try await self.centralManager?.cancelPeripheralConnectionContinuations.resumeContinuation(
                     result, withKey: peripheral.identifier
                 )
                 Self.logger.info("Disconnected from \(peripheral.identifier)")
