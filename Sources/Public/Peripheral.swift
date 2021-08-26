@@ -25,7 +25,7 @@ public class Peripheral {
     
     let cbPeripheral: CBPeripheral
     
-    var name: String? {
+    public var name: String? {
         self.cbPeripheral.name
     }
     
