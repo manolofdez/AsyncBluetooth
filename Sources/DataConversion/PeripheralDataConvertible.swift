@@ -19,14 +19,13 @@ extension String: PeripheralDataConvertible {
 
 extension Bool: PeripheralDataConvertible {
     public static func fromData(_ data: Data) -> Self? {
-        guard let numericValue = Int.fromData(data), (0...1).contains(numericValue) else {
-            return nil
-        }
+        guard let numericValue = Int.fromData(data), (0...1).contains(numericValue) else { return nil }
         return numericValue == 1
     }
     
     public func toData() -> Data? {
-        NSNumber(value: self).intValue.toData()
+        var value = self
+        return Data(bytes: &value, count: MemoryLayout.size(ofValue: self))
     }
 }
 
@@ -44,7 +43,7 @@ extension PeripheralDataConvertible where Self: Numeric {
     public static func fromData(_ data: Data) -> Self? {
         guard data.count > 0 else { return nil }
         
-        var value: Self = 0
+        var value: Self = .zero
         _ = withUnsafeMutableBytes(of: &value) {
             data.copyBytes(to: $0.bindMemory(to: Self.self))
         }
@@ -52,7 +51,8 @@ extension PeripheralDataConvertible where Self: Numeric {
     }
     
     public func toData() -> Data? {
-        withUnsafeBytes(of: self) { Data($0) }
+        var value = self
+        return .init(bytes: &value, count: MemoryLayout<Self>.size)
     }
 }
 
