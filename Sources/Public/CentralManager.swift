@@ -20,8 +20,12 @@ public class CentralManager {
         category: "centralManager"
     )
     
-    var bluetoothState: CBManagerState {
+    public var bluetoothState: CBManagerState {
         self.cbCentralManager.state
+    }
+    
+    public var isScanning: Bool {
+        self.peripheralScanStreamContinuation != nil
     }
     
     private let cbCentralManager: CBCentralManager
@@ -30,10 +34,6 @@ public class CentralManager {
     private let connectToPeripheralContinuations = CheckedContinuationMapStorage<UUID, Void, Error>()
     private let cancelPeripheralConnectionContinuations = CheckedContinuationMapStorage<UUID, Void, Error>()
     private var peripheralScanStreamContinuation: AsyncStream<PeripheralScanData>.Continuation?
-    
-    private var isScanning: Bool {
-        self.peripheralScanStreamContinuation != nil
-    }
     
     private lazy var cbCentralManagerDelegate: CBCentralManagerDelegate = {
         DelegateWrapper(owner: self)
@@ -122,6 +122,12 @@ public class CentralManager {
     }
     
     public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
+        let peripheralState = peripheral.cbPeripheral.state
+        guard peripheralState == CBPeripheralState.connecting || peripheralState == CBPeripheralState.connected else {
+            Self.logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.id) exists nor being attempted")
+            throw BluetoothError.noConnectionToPeripheralExists
+        }
+        
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             Task {
                 do {
