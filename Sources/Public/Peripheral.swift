@@ -23,8 +23,6 @@ public class Peripheral {
         self.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }()
     
-    let cbPeripheral: CBPeripheral
-    
     public var name: String? {
         self.cbPeripheral.name
     }
@@ -32,6 +30,16 @@ public class Peripheral {
     public var discoveredServices: [Service]? {
         self.cbPeripheral.services?.map { Service($0) }
     }
+    
+    public var state: CBPeripheralState {
+        self.cbPeripheral.state
+    }
+    
+    public var ancsAuthorized: Bool {
+        self.cbPeripheral.ancsAuthorized
+    }
+    
+    let cbPeripheral: CBPeripheral
     
     private let characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
     
@@ -61,16 +69,6 @@ public class Peripheral {
         }
     }
     
-    public func maximumWriteValueLength(for type: CBCharacteristicWriteType) -> Int {
-        self.cbPeripheral.maximumWriteValueLength(for: type)
-    }
-    
-    public func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
-        try await self.setNotifyValueStorage.perform(withKey: characteristic.uuid) { [weak self] in
-            self?.cbPeripheral.setNotifyValue(enabled, for: characteristic)
-        }
-    }
-    
     @available(iOS 11.0, *)
     public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
         try await self.openL2CAPChannelStorage.perform { [weak self] in
@@ -78,15 +76,67 @@ public class Peripheral {
         }
     }
     
-    func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
+    // MARK: Public: Services
+    
+    public func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
         try await self.discoverServiceStorage.perform { [weak self] in
             self?.cbPeripheral.discoverServices(serviceUUIDs)
         }
     }
     
+    public func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) async throws {
+        try await self.discoverIncludedServices(includedServiceUUIDs, for: service.cbService)
+    }
+    
+    // MARK: Public: Characteristics
+    
+    public func maximumWriteValueLength(for type: CBCharacteristicWriteType) -> Int {
+        self.cbPeripheral.maximumWriteValueLength(for: type)
+    }
+    
+    public func setNotifyValue(_ enabled: Bool, for characteristic: Characteristic) async throws {
+        try await self.setNotifyValue(enabled, for: characteristic.cbCharacteristic)
+    }
+    
+    public func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) async throws {
+        try await self.discoverCharacteristics(characteristicUUIDs, for: service.cbService)
+    }
+    
+    public func readValue(for characteristic: Characteristic) async throws {
+        try await self.readValue(for: characteristic.cbCharacteristic)
+    }
+    
+    public func writeValue(_ data: Data, for characteristic: Characteristic, type: CBCharacteristicWriteType) async throws {
+        try await self.writeValue(data, for: characteristic.cbCharacteristic, type: type)
+    }
+    
+    // MARK: Public Descriptors
+    
+    public func discoverDescriptors(for characteristic: Characteristic) async throws {
+        try await self.discoverDescriptors(for: characteristic.cbCharacteristic)
+    }
+    
+    public func readValue(for descriptor: Descriptor) async throws {
+        try await self.readValue(for: descriptor.cbDescriptor)
+    }
+    
+    public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
+        try await self.writeValue(data, for: descriptor)
+    }
+    
+    // MARK: Internal: Services
+    
     func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService) async throws {
         try await self.discoverIncludedServicesStorage.perform(withKey: service.uuid) { [weak self] in
             self?.cbPeripheral.discoverIncludedServices(includedServiceUUIDs, for: service)
+        }
+    }
+    
+    // MARK: Internal: Characteristics
+    
+    func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
+        try await self.setNotifyValueStorage.perform(withKey: characteristic.uuid) { [weak self] in
+            self?.cbPeripheral.setNotifyValue(enabled, for: characteristic)
         }
     }
     
@@ -102,7 +152,11 @@ public class Peripheral {
         }
     }
     
-    func writeValue(_ data: Data, for characteristic: CBCharacteristic, type: CBCharacteristicWriteType) async throws  {
+    func writeValue(
+        _ data: Data,
+        for characteristic: CBCharacteristic,
+        type: CBCharacteristicWriteType
+    ) async throws {
         try await self.writeCharacteristicValueStorage.perform(withKey: characteristic.uuid) { [weak self] in
             guard let self = self else { return }
             
@@ -115,6 +169,8 @@ public class Peripheral {
             self.cbPeripheralDelegate.peripheral?(self.cbPeripheral, didWriteValueFor: characteristic, error: nil)
         }
     }
+    
+    // MARK: Internal: Descriptors
     
     func discoverDescriptors(for characteristic: CBCharacteristic) async throws {
         try await self.discoverDescriptorsStorage.perform(withKey: characteristic.uuid) { [weak self] in
