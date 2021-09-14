@@ -12,7 +12,7 @@ public struct Service {
         self.cbService.includedServices?.map { Service($0) }
     }
     
-    public var characteristics: [Characteristic]? {
+    public var discoveredCharacteristics: [Characteristic]? {
         self.cbService.characteristics?.map { Characteristic($0) }
     }
     
