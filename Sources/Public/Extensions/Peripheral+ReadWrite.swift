@@ -2,13 +2,16 @@ import Foundation
 import CoreBluetooth
 
 extension Peripheral {
+    /// Reads and parses the value of a characteristic with a given identifier, of a service with a
+    /// given identifier.
+    /// - Note: If the service or characteristic has not been discovered, it will attempt to discover it.
     public func readValue<Value>(
-        forCharacteristicWithUUID characteristicUUID: CBUUID,
-        ofServiceWithUUID serviceUUID: CBUUID
+        forCharacteristicWithIdentifier characteristicIdentifier: CBUUID,
+        ofServiceWithUUID serviceIdentifier: CBUUID
     ) async throws -> Value? where Value: PeripheralDataConvertible {
         guard let characteristic = try await self.findCharacteristic(
-            uuid: characteristicUUID,
-            ofServiceWithUUID: serviceUUID
+            uuid: characteristicIdentifier,
+            ofServiceWithUUID: serviceIdentifier
         ) else {
             throw BluetoothError.characteristicNotFound
         }
@@ -26,6 +29,9 @@ extension Peripheral {
         return value
     }
     
+    /// Writes and parses the value of a characteristic with a given identifier, of a service with a
+    /// given identifier.
+    /// - Note: If the service or characteristic has not been discovered, it will attempt to discover it.
     public func writeValue<Value>(
         _ value: Value,
         forCharacteristicWithUUID characteristicUUID: CBUUID,

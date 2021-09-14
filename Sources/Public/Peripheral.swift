@@ -3,7 +3,8 @@ import CoreBluetooth
 import Combine
 import os.log
 
-/// A wrapper around `CBPeripheral`, used to interact with a remote peripheral.
+/// A remote peripheral device.
+/// - This class acts as a wrapper around `CBPeripheral`.
 public class Peripheral {
     
     fileprivate class DelegateWrapper: NSObject {
@@ -19,22 +20,31 @@ public class Peripheral {
         category: "peripheral"
     )
     
+    /// Publishes characteristics that are notifying of value changes.
     public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
         self.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }()
+    
+    /// The UUID associated with the peripheral.
+    public var identifier: UUID {
+        self.cbPeripheral.identifier
+    }
     
     public var name: String? {
         self.cbPeripheral.name
     }
     
+    /// A list of a peripheral’s discovered services.
     public var discoveredServices: [Service]? {
         self.cbPeripheral.services?.map { Service($0) }
     }
     
+    /// The connection state of the peripheral.
     public var state: CBPeripheralState {
         self.cbPeripheral.state
     }
     
+    /// A Boolean value that indicates if the remote device has authorization to receive data over ANCS protocol.
     public var ancsAuthorized: Bool {
         self.cbPeripheral.ancsAuthorized
     }
@@ -63,12 +73,14 @@ public class Peripheral {
         self.cbPeripheral = cbPeripheral
     }
     
+    /// Retrieves the current RSSI value for the peripheral while connected to the central manager.
     public func readRSSI() async throws -> NSNumber {
         try await self.readRSSIExecutor.enqueue { [weak self] in
             self?.cbPeripheral.readRSSI()
         }
     }
     
+    /// Attempts to open an L2CAP channel to the peripheral using the supplied Protocol/Service Multiplexer (PSM).
     @available(iOS 11.0, *)
     public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
         try await self.openL2CAPChannelExecutor.enqueue { [weak self] in
@@ -78,48 +90,58 @@ public class Peripheral {
     
     // MARK: Public: Services
     
+    /// Discovers the specified services of the peripheral.
     public func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
         try await self.discoverServiceExecutor.enqueue { [weak self] in
             self?.cbPeripheral.discoverServices(serviceUUIDs)
         }
     }
     
+    /// Discovers the specified included services of a previously-discovered service.
     public func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) async throws {
         try await self.discoverIncludedServices(includedServiceUUIDs, for: service.cbService)
     }
     
     // MARK: Public: Characteristics
     
+    /// The maximum amount of data, in bytes, you can send to a characteristic in a single write type.
     public func maximumWriteValueLength(for type: CBCharacteristicWriteType) -> Int {
         self.cbPeripheral.maximumWriteValueLength(for: type)
     }
     
+    /// Sets notifications or indications for the value of a specified characteristic.
     public func setNotifyValue(_ enabled: Bool, for characteristic: Characteristic) async throws {
         try await self.setNotifyValue(enabled, for: characteristic.cbCharacteristic)
     }
     
+    /// Discovers the specified characteristics of a service.
     public func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) async throws {
         try await self.discoverCharacteristics(characteristicUUIDs, for: service.cbService)
     }
     
+    /// Retrieves the value of a specified characteristic.
     public func readValue(for characteristic: Characteristic) async throws {
         try await self.readValue(for: characteristic.cbCharacteristic)
     }
     
+    /// Writes the value of a characteristic.
     public func writeValue(_ data: Data, for characteristic: Characteristic, type: CBCharacteristicWriteType) async throws {
         try await self.writeValue(data, for: characteristic.cbCharacteristic, type: type)
     }
     
     // MARK: Public Descriptors
     
+    /// Discovers the descriptors of a characteristic.
     public func discoverDescriptors(for characteristic: Characteristic) async throws {
         try await self.discoverDescriptors(for: characteristic.cbCharacteristic)
     }
     
+    /// Retrieves the value of a specified characteristic descriptor.
     public func readValue(for descriptor: Descriptor) async throws {
         try await self.readValue(for: descriptor.cbDescriptor)
     }
     
+    /// Writes the value of a characteristic descriptor.
     public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
         try await self.writeValue(data, for: descriptor)
     }

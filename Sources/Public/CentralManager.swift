@@ -8,7 +8,7 @@ public class CentralManager {
     private typealias Utils = CentralManagerUtils
     
     private enum ScanningState {
-        case idle
+        case notScanning
         case awaiting
         case scanning(continuation: AsyncStream<PeripheralScanData>.Continuation)
     }
@@ -32,7 +32,7 @@ public class CentralManager {
     
     public var isScanning: Bool {
         switch self.scanningState {
-        case .idle:
+        case .notScanning:
             return false
         default:
             return true
@@ -44,7 +44,7 @@ public class CentralManager {
     private let waitUntilReadyExecutor = AsyncSerialExecutor<Void>()
     private let connectToPeripheralExecutor = AsyncExecutorMap<UUID, Void>()
     private let cancelPeripheralConnectionExecutor = AsyncExecutorMap<UUID, Void>()
-    private var scanningState: ScanningState = .idle
+    private var scanningState: ScanningState = .notScanning
     
     private lazy var cbCentralManagerDelegate: CBCentralManagerDelegate = {
         DelegateWrapper(owner: self)
@@ -59,6 +59,9 @@ public class CentralManager {
     
     // MARK: Public
     
+    /// Waits until Bluetooth is ready. If the Bluetooth state is unknown or resetting, it
+    /// will wait until a `centralManagerDidUpdateState` message is received. If Bluetooth is powered off,
+    /// unsupported or unauthorized, an error will be thrown. Otherwise we'll continue.
     public func waitUntilReady() async throws {
         guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
             Self.logger.info("Waiting for bluetooth to be ready...")
@@ -75,6 +78,7 @@ public class CentralManager {
         }
     }
     
+    /// Scans for peripherals that are advertising services.
     public func scanForPeripherals(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil
@@ -89,7 +93,7 @@ public class CentralManager {
         return AsyncStream(PeripheralScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
                 self.cbCentralManager.stopScan()
-                self.scanningState = .idle
+                self.scanningState = .notScanning
                 
                 Self.logger.info("Stopped scanning peripherals")
             }
@@ -102,6 +106,7 @@ public class CentralManager {
         }
     }
     
+    /// Asks the central manager to stop scanning for peripherals.
     public func stopScan() {
         guard case ScanningState.scanning(let continuation) = self.scanningState else {
             Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
@@ -113,48 +118,53 @@ public class CentralManager {
         Self.logger.info("Stopping scan...")
     }
     
+    /// Establishes a local connection to a peripheral.
     public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
-        guard await !self.connectToPeripheralExecutor.hasWorkForKey(peripheral.id) else {
-            Self.logger.error("Unable to connect to \(peripheral.id) because a connection attempt is already in progress")
+        guard await !self.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) else {
+            Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
 
             throw BluetoothError.connectingInProgress
         }
         
-        try await self.connectToPeripheralExecutor.enqueue(withKey: peripheral.id) {
-            Self.logger.info("Connecting to \(peripheral.id)")
+        try await self.connectToPeripheralExecutor.enqueue(withKey: peripheral.identifier) {
+            Self.logger.info("Connecting to \(peripheral.identifier)")
             
             self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
         }
     }
     
+    /// Cancels an active or pending local connection to a peripheral.
     public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
         let peripheralState = peripheral.cbPeripheral.state
         guard peripheralState == CBPeripheralState.connecting || peripheralState == CBPeripheralState.connected else {
-            Self.logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.id) exists nor being attempted")
+            Self.logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.identifier) exists nor being attempted")
             throw BluetoothError.noConnectionToPeripheralExists
         }
         
-        guard await !self.cancelPeripheralConnectionExecutor.hasWorkForKey(peripheral.id) else {
-            Self.logger.error("Unable to disconnect from \(peripheral.id) because a disconnection attempt is already in progress")
+        guard await !self.cancelPeripheralConnectionExecutor.hasWorkForKey(peripheral.identifier) else {
+            Self.logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
 
             throw BluetoothError.disconnectingInProgress
         }
 
-        try await self.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.id) {
-            Self.logger.info("Disconnecting from \(peripheral.id)")
+        try await self.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
+            Self.logger.info("Disconnecting from \(peripheral.identifier)")
             
             self.cbCentralManager.cancelPeripheralConnection(peripheral.cbPeripheral)
         }
     }
     
+    /// Returns a list of known peripherals by their identifiers.
     public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral] {
         self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { Peripheral($0) }
     }
     
+    /// Returns a list of the peripherals connected to the system whose services match a given set of criteria.
     public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
         self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0) }
     }
 
+    /// Returns a Boolean that indicates whether the device supports a specific set of features.
     @available(macOS, unavailable)
     public static func supports(_ features: CBCentralManager.Feature) -> Bool {
         CBCentralManager.supports(features)
@@ -202,7 +212,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         }
         continuation.yield(peripheralScanData)
         
-        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.id)")
+        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
