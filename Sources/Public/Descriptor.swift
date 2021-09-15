@@ -11,7 +11,7 @@ public struct Descriptor {
     }
     
     /// The Bluetooth-specific UUID of the descriptor.
-    public var id: CBUUID {
+    public var uuid: CBUUID {
         self.cbDescriptor.uuid
     }
     
