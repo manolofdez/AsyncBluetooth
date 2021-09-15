@@ -5,7 +5,7 @@ import Foundation
 actor AsyncSerialExecutor<Value> {
     
     enum AsyncSerialExecutor: Error {
-        case continuationNotFound
+        case notExecutingWork
         case canceled
         case executorDeinitialized
     }
@@ -17,34 +17,40 @@ actor AsyncSerialExecutor<Value> {
         var isCanceled = false
     }
     
+    private struct CurrentWork {
+        let id: UUID
+        let continuation: CheckedContinuation<Value, Error>
+    }
+    
     var isExecutingWork: Bool {
-        self.currentContinuation != nil
+        self.currentWork != nil
     }
     
     var hasWork: Bool {
         self.isExecutingWork || self.queue.count > 0
     }
     
-    private var currentContinuation: CheckedContinuation<Value, Error>?
+    private var currentWork: CurrentWork?
     private var queue: [QueuedWork] = []
     
     /// Places work in the queue to be executed. If the queue is empty it will be executed. Otherwise it will
     /// get dequeued (and executed) when all previously queued work has finished.
-    /// - Note: Once the block is executed, the task will be waiting until clients provide a Result via
-    ///         `setWorkCompletedWithResult`. No other work will be executed during this time.
+    /// This function will await until the given block is executed and will only resume after clients provide a Result
+    /// via `setWorkCompletedWithResult`.
+    /// - Note: No other work will be executed while there's a work in progress.
     func enqueue(
         _ block: @escaping () -> Void
     ) async throws -> Value {
         let queuedWorkID = UUID()
         
         return try await withTaskCancellationHandler {
-            Task { [weak self] in
-                await self?.cancelQueuedWork(id: queuedWorkID)
+            Task.detached { [weak self] in
+                await self?.cancelWork(id: queuedWorkID)
             }
         } operation: {
             try await withCheckedThrowingContinuation { continuation in
                 self.queue.append(QueuedWork(id: queuedWorkID, block: block, continuation: continuation))
-                self.dequeueIfNecessary()
+                self.scheduleDequeue()
             }
         }
     }
@@ -55,12 +61,13 @@ actor AsyncSerialExecutor<Value> {
             self.scheduleDequeue()
         }
         
-        guard let continuation = self.currentContinuation else {
-            throw AsyncSerialExecutor.continuationNotFound
+        guard let currentWork = self.currentWork else {
+            throw AsyncSerialExecutor.notExecutingWork
         }
-        continuation.resume(with: result)
         
-        self.currentContinuation = nil
+        currentWork.continuation.resume(with: result)
+        
+        self.currentWork = nil
     }
     
     /// Sends the given result to all queued and executing work.
@@ -68,13 +75,15 @@ actor AsyncSerialExecutor<Value> {
         let queue = self.queue
         self.queue.removeAll()
         
-        self.currentContinuation?.resume(with: result)
+        self.currentWork?.continuation.resume(with: result)
+        self.currentWork = nil
+        
         queue.forEach { $0.continuation.resume(with: result) }
     }
     
     private func scheduleDequeue() {
-        Task {
-            self.dequeueIfNecessary()
+        Task.detached {
+            await self.dequeueIfNecessary()
         }
     }
     
@@ -91,17 +100,25 @@ actor AsyncSerialExecutor<Value> {
             return
         }
         
-        self.currentContinuation = queuedWork.continuation
+        self.currentWork = CurrentWork(id: queuedWork.id, continuation: queuedWork.continuation)
         
         queuedWork.block()
     }
 
-    /// Marks a Queued Work as canceled. Once the work gets dequeued, it will get canceled without executing.
-    /// - Note: If the work is already executing it will NOT get canceled.
-    private func cancelQueuedWork(id: UUID) {
-        guard let index =  self.queue.firstIndex(where: { $0.id == id }) else {
+    /// Cancels the work with the given ID. If the work is executing it will be immediately canceled. If it's queued,
+    /// the work will get flagged and once its dequeued, it will get canceled without executing.
+    private func cancelWork(id: UUID) {
+        guard let currentWork = self.currentWork, currentWork.id == id else {
+            self.markQueuedWorkAsCanceled(id: id)
             return
         }
+        currentWork.continuation.resume(throwing: AsyncSerialExecutor.canceled)
+        self.currentWork = nil
+        self.scheduleDequeue()
+    }
+    
+    private func markQueuedWorkAsCanceled(id: UUID) {
+        guard let index = self.queue.firstIndex(where: { $0.id == id }) else { return }
         self.queue[index].isCanceled = true
     }
     

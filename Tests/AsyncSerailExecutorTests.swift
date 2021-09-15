@@ -16,19 +16,19 @@ class AsyncSerailExecutorTests: XCTestCase {
         let state = State()
         let queue = AsyncSerialExecutor<Void>()
         
-        let task1 = Self.enqueueTask(on: queue, state: state)
+        let task1 = Self.enqueueTask(on: queue, state: state) {
+            Task {
+                XCTAssert(state.taskStates[0].executed)
+                XCTAssert(!state.taskStates[1].executed)
+
+                try await queue.setWorkCompletedWithResult(.success(()))
+            }
+        }
         Self.enqueueTask(on: queue, state: state)
         
         XCTAssert(!state.taskStates[0].executed)
         XCTAssert(!state.taskStates[1].executed)
         
-        Task {
-            XCTAssert(state.taskStates[0].executed)
-            XCTAssert(!state.taskStates[1].executed)
-            
-            try await queue.setWorkCompletedWithResult(.success(()))
-        }
-
         await _ = task1.result
 
         XCTAssert(state.taskStates[0].executed)
@@ -39,15 +39,16 @@ class AsyncSerailExecutorTests: XCTestCase {
         let state = State()
         let queue = AsyncSerialExecutor<Void>()
         
-        Self.enqueueTask(on: queue, state: state)
+        let task1 = Self.enqueueTask(on: queue, state: state) {
+            Task {
+                try await queue.setWorkCompletedWithResult(.success(()))
+            }
+        }
         let task2 = Self.enqueueTask(on: queue, state: state)
 
         task2.cancel()
 
-        Task {
-            try await queue.setWorkCompletedWithResult(.success(()))
-        }
-        
+        await _ = task1.result
         await _ = task2.result
         
         XCTAssert(state.taskStates[0].executed)
@@ -61,15 +62,15 @@ class AsyncSerailExecutorTests: XCTestCase {
         let state = State()
         let queue = AsyncSerialExecutor<Void>()
         
-        Self.enqueueTask(on: queue, state: state)
+        Self.enqueueTask(on: queue, state: state) {
+            Task {
+                try await queue.setWorkCompletedWithResult(.success(()))
+            }
+        }
         let task2 = Self.enqueueTask(on: queue, state: state)
         Self.enqueueTask(on: queue, state: state)
 
         task2.cancel()
-
-        Task {
-            try await queue.setWorkCompletedWithResult(.success(()))
-        }
         
         await _ = task2.result
         
@@ -84,7 +85,8 @@ class AsyncSerailExecutorTests: XCTestCase {
     @discardableResult
     private static func enqueueTask(
         on queue: AsyncSerialExecutor<Void>,
-        state: State
+        state: State,
+        block: (() -> Void)? = nil
     ) -> Task<Void, Error> {
         let taskState = State.TaskState()
         state.taskStates.append(taskState)
@@ -92,6 +94,7 @@ class AsyncSerailExecutorTests: XCTestCase {
         return Task {
             try? await queue.enqueue {
                 taskState.executed = true
+                block?()
             }
             taskState.isComplete = true
         }

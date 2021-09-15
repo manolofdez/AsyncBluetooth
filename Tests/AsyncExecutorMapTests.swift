@@ -8,11 +8,12 @@ class AsyncExecutorMapTests: XCTestCase {
     func testCanPerformTwoTasksSimultaneously() async {
         class State {
             var isExecutingTask1 = false
-            var isExecutingTask2 = false
         }
-
+        
         let executor = AsyncExecutorMap<String, Void>()
         let state = State()
+        
+        XCTAssert(!state.isExecutingTask1)
         
         Task {
             try? await executor.enqueue(withKey: "task1") {
@@ -20,22 +21,16 @@ class AsyncExecutorMapTests: XCTestCase {
             }
         }
         
-        Task {
+        let task2 = Task {
             try? await executor.enqueue(withKey: "task2") {
-                state.isExecutingTask2 = true
+                XCTAssert(state.isExecutingTask1)
+                
+                Task {
+                    try? await executor.setWorkCompletedForKey("task2", result: .success(()))
+                }
             }
         }
         
-        let testTask = Task {
-            XCTAssert(state.isExecutingTask1)
-            XCTAssert(state.isExecutingTask2)
-            
-            Task {
-                try await executor.setWorkCompletedForKey("task1", result: .success(()))
-                try await executor.setWorkCompletedForKey("task2", result: .success(()))
-            }
-        }
-        
-        let _ = await testTask.result
-    }    
+        _ = await task2.result
+    }
 }
