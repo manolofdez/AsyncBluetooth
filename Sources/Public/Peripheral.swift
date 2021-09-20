@@ -8,7 +8,7 @@ import os.log
 public class Peripheral {
     
     fileprivate class DelegateWrapper: NSObject {
-        private let context: PeripheralContext
+        fileprivate let context: PeripheralContext
         
         init(context: PeripheralContext) {
             self.context = context
@@ -51,12 +51,28 @@ public class Peripheral {
     
     let cbPeripheral: CBPeripheral
     
-    let context = PeripheralContext()
-
+    private let context: PeripheralContext
+    /// The delegate object that will receive `cbPeripheral`.
+    /// - Note: We need to hold on to it because `cbPeripheral` has a weak reference to it.
     private let cbPeripheralDelegate: DelegateWrapper
     
     init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
+        
+        // By reusing the cbPeripheralDelegate and context, we guarantee that we will enqueue calls to the peripheral
+        // using the same context, and that won't lose any callbacks from the CBPeripheralDelegate.
+        // This is important because we can create multiple Peripherals for a single cbPeripheral.
+        if let cbPeripheralDelegate = cbPeripheral.delegate as? DelegateWrapper {
+            self.context = cbPeripheralDelegate.context
+            self.cbPeripheralDelegate = cbPeripheralDelegate
+            return
+        }
+        
+        if cbPeripheral.delegate != nil {
+            Self.logger.warning("Replacing delegate for peripheral \(cbPeripheral.identifier) can cause problems.")
+        }
+        
+        self.context = PeripheralContext()
         self.cbPeripheralDelegate = DelegateWrapper(context: self.context)
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
