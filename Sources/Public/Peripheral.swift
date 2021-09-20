@@ -8,10 +8,10 @@ import os.log
 public class Peripheral {
     
     fileprivate class DelegateWrapper: NSObject {
-        private weak var peripheral: Peripheral?
+        private let context: PeripheralContext
         
-        init(owner peripheral: Peripheral) {
-            self.peripheral = peripheral
+        init(context: PeripheralContext) {
+            self.context = context
         }
     }
     
@@ -22,7 +22,7 @@ public class Peripheral {
     
     /// Publishes characteristics that are notifying of value changes.
     public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
-        self.characteristicValueUpdatedSubject.eraseToAnyPublisher()
+        self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }()
     
     /// The UUID associated with the peripheral.
@@ -51,32 +51,19 @@ public class Peripheral {
     
     let cbPeripheral: CBPeripheral
     
-    private let characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
-    
-    private let readRSSIExecutor = AsyncSerialExecutor<NSNumber>()
-    private let discoverServiceExecutor = AsyncSerialExecutor<Void>()
-    private let discoverIncludedServicesExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let discoverCharacteristicsExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let readCharacteristicValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let writeCharacteristicValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let setNotifyValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let discoverDescriptorsExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let readDescriptorValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let writeDescriptorValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private let openL2CAPChannelExecutor = AsyncSerialExecutor<Void>()
-    
-    private lazy var cbPeripheralDelegate: CBPeripheralDelegate = {
-        DelegateWrapper(owner: self)
-    }()
+    let context = PeripheralContext()
+
+    private let cbPeripheralDelegate: DelegateWrapper
     
     init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
+        self.cbPeripheralDelegate = DelegateWrapper(context: self.context)
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
     
     /// Retrieves the current RSSI value for the peripheral while connected to the central manager.
     public func readRSSI() async throws -> NSNumber {
-        try await self.readRSSIExecutor.enqueue { [weak self] in
+        try await self.context.readRSSIExecutor.enqueue { [weak self] in
             self?.cbPeripheral.readRSSI()
         }
     }
@@ -84,7 +71,7 @@ public class Peripheral {
     /// Attempts to open an L2CAP channel to the peripheral using the supplied Protocol/Service Multiplexer (PSM).
     @available(iOS 11.0, *)
     public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
-        try await self.openL2CAPChannelExecutor.enqueue { [weak self] in
+        try await self.context.openL2CAPChannelExecutor.enqueue { [weak self] in
             self?.cbPeripheral.openL2CAPChannel(PSM)
         }
     }
@@ -93,7 +80,7 @@ public class Peripheral {
     
     /// Discovers the specified services of the peripheral.
     public func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
-        try await self.discoverServiceExecutor.enqueue { [weak self] in
+        try await self.context.discoverServiceExecutor.enqueue { [weak self] in
             self?.cbPeripheral.discoverServices(serviceUUIDs)
         }
     }
@@ -150,7 +137,7 @@ public class Peripheral {
     // MARK: Internal: Services
     
     func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService) async throws {
-        try await self.discoverIncludedServicesExecutor.enqueue(withKey: service.uuid) { [weak self] in
+        try await self.context.discoverIncludedServicesExecutor.enqueue(withKey: service.uuid) { [weak self] in
             self?.cbPeripheral.discoverIncludedServices(includedServiceUUIDs, for: service)
         }
     }
@@ -158,19 +145,19 @@ public class Peripheral {
     // MARK: Internal: Characteristics
     
     func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
-        try await self.setNotifyValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+        try await self.context.setNotifyValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
             self?.cbPeripheral.setNotifyValue(enabled, for: characteristic)
         }
     }
     
     func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService) async throws {
-        try await self.discoverCharacteristicsExecutor.enqueue(withKey: service.uuid) { [weak self] in
+        try await self.context.discoverCharacteristicsExecutor.enqueue(withKey: service.uuid) { [weak self] in
             self?.cbPeripheral.discoverCharacteristics(characteristicUUIDs, for: service)
         }
     }
     
     func readValue(for characteristic: CBCharacteristic) async throws {
-        try await self.readCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+        try await self.context.readCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
             self?.cbPeripheral.readValue(for: characteristic)
         }
     }
@@ -180,7 +167,7 @@ public class Peripheral {
         for characteristic: CBCharacteristic,
         type: CBCharacteristicWriteType
     ) async throws {
-        try await self.writeCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+        try await self.context.writeCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
             guard let self = self else { return }
             
             self.cbPeripheral.writeValue(data, for: characteristic, type: type)
@@ -189,26 +176,26 @@ public class Peripheral {
                 return
             }
             
-            self.cbPeripheralDelegate.peripheral?(self.cbPeripheral, didWriteValueFor: characteristic, error: nil)
+            self.cbPeripheralDelegate.peripheral(self.cbPeripheral, didWriteValueFor: characteristic, error: nil)
         }
     }
     
     // MARK: Internal: Descriptors
     
     func discoverDescriptors(for characteristic: CBCharacteristic) async throws {
-        try await self.discoverDescriptorsExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+        try await self.context.discoverDescriptorsExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
             self?.cbPeripheral.discoverDescriptors(for: characteristic)
         }
     }
     
     func readValue(for descriptor: CBDescriptor) async throws {
-        try await self.readDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
+        try await self.context.readDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
             self?.cbPeripheral.readValue(for: descriptor)
         }
     }
     
     func writeValue(_ data: Data, for descriptor: CBDescriptor) async throws {
-        try await self.writeDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
+        try await self.context.writeDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
             self?.cbPeripheral.writeValue(data, for: descriptor)
         }
     }
@@ -225,7 +212,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: RSSI, error: error)
-                try await self.peripheral?.readRSSIExecutor.setWorkCompletedWithResult(result)
+                try await self.context.readRSSIExecutor.setWorkCompletedWithResult(result)
             } catch {
                 Self.logger.error("Received ReadRSSI response without a continuation")
             }
@@ -236,7 +223,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.discoverServiceExecutor.setWorkCompletedWithResult(result)
+                try await self.context.discoverServiceExecutor.setWorkCompletedWithResult(result)
             } catch {
                 Self.logger.warning("Received DiscoverServices response without a continuation")
             }
@@ -247,7 +234,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.discoverIncludedServicesExecutor.setWorkCompletedForKey(
+                try await self.context.discoverIncludedServicesExecutor.setWorkCompletedForKey(
                     service.uuid, result: result
                 )
             } catch {
@@ -260,7 +247,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.discoverCharacteristicsExecutor.setWorkCompletedForKey(
+                try await self.context.discoverCharacteristicsExecutor.setWorkCompletedForKey(
                     service.uuid, result: result
                 )
             } catch {
@@ -273,7 +260,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.readCharacteristicValueExecutor.setWorkCompletedForKey(
+                try await self.context.readCharacteristicValueExecutor.setWorkCompletedForKey(
                     characteristic.uuid, result: result
                 )
             } catch {
@@ -286,7 +273,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
             guard characteristic.isNotifying else {
                 return
             }
-            self.peripheral?.characteristicValueUpdatedSubject.send(
+            self.context.characteristicValueUpdatedSubject.send(
                 Characteristic(characteristic)
             )
         }
@@ -296,7 +283,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.writeCharacteristicValueExecutor.setWorkCompletedForKey(
+                try await self.context.writeCharacteristicValueExecutor.setWorkCompletedForKey(
                     characteristic.uuid, result: result
                 )
             } catch {
@@ -313,7 +300,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.setNotifyValueExecutor.setWorkCompletedForKey(
+                try await self.context.setNotifyValueExecutor.setWorkCompletedForKey(
                     characteristic.uuid, result: result
                 )
             } catch {
@@ -330,7 +317,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.discoverDescriptorsExecutor.setWorkCompletedForKey(
+                try await self.context.discoverDescriptorsExecutor.setWorkCompletedForKey(
                     characteristic.uuid, result: result
                 )
             } catch {
@@ -343,7 +330,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.readDescriptorValueExecutor.setWorkCompletedForKey(
+                try await self.context.readDescriptorValueExecutor.setWorkCompletedForKey(
                     descriptor.uuid, result: result
                 )
             } catch {
@@ -356,7 +343,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.writeDescriptorValueExecutor.setWorkCompletedForKey(
+                try await self.context.writeDescriptorValueExecutor.setWorkCompletedForKey(
                     descriptor.uuid, result: result
                 )
             } catch {
@@ -369,7 +356,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.peripheral?.openL2CAPChannelExecutor.setWorkCompletedWithResult(result)
+                try await self.context.openL2CAPChannelExecutor.setWorkCompletedWithResult(result)
             } catch {
                 Self.logger.warning("Received OpenChannel result without a continuation")
             }
