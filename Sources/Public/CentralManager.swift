@@ -113,9 +113,9 @@ public class CentralManager {
             return
         }
         
-        continuation.finish()
-        
         Self.logger.info("Stopping scan...")
+        
+        continuation.finish()
     }
     
     /// Establishes a local connection to a peripheral.
