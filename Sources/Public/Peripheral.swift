@@ -71,6 +71,7 @@ public class Peripheral {
     
     init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
+        self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
     
     /// Retrieves the current RSSI value for the peripheral while connected to the central manager.
