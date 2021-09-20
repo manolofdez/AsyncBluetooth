@@ -7,17 +7,11 @@ public class CentralManager {
     
     private typealias Utils = CentralManagerUtils
     
-    private enum ScanningState {
-        case notScanning
-        case awaiting
-        case scanning(continuation: AsyncStream<PeripheralScanData>.Continuation)
-    }
-    
     fileprivate class DelegateWrapper: NSObject {
-        private weak var centralManager: CentralManager?
+        private let context: CentralManagerContext
         
-        init(owner centralManager: CentralManager) {
-            self.centralManager = centralManager
+        init(context: CentralManagerContext) {
+            self.context = context
         }
     }
     
@@ -31,7 +25,7 @@ public class CentralManager {
     }
     
     public var isScanning: Bool {
-        switch self.scanningState {
+        switch self.context.scanningState {
         case .notScanning:
             return false
         default:
@@ -40,20 +34,15 @@ public class CentralManager {
     }
     
     private let cbCentralManager: CBCentralManager
-    
-    private let waitUntilReadyExecutor = AsyncSerialExecutor<Void>()
-    private let connectToPeripheralExecutor = AsyncExecutorMap<UUID, Void>()
-    private let cancelPeripheralConnectionExecutor = AsyncExecutorMap<UUID, Void>()
-    private var scanningState: ScanningState = .notScanning
-    
-    private lazy var cbCentralManagerDelegate: CBCentralManagerDelegate = {
-        DelegateWrapper(owner: self)
-    }()
+    private let context: CentralManagerContext
+    private let cbCentralManagerDelegate: CBCentralManagerDelegate
     
     // MARK: Constructors
 
     public init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
         self.cbCentralManager = CBCentralManager(delegate: nil, queue: dispatchQueue, options: options)
+        self.context = CentralManagerContext()
+        self.cbCentralManagerDelegate = DelegateWrapper(context: self.context)
         self.cbCentralManager.delegate = self.cbCentralManagerDelegate
     }
     
@@ -66,7 +55,7 @@ public class CentralManager {
         guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
             Self.logger.info("Waiting for bluetooth to be ready...")
             
-            try await self.waitUntilReadyExecutor.enqueue {}
+            try await self.context.waitUntilReadyExecutor.enqueue {}
             return
         }
 
@@ -88,17 +77,17 @@ public class CentralManager {
             throw BluetoothError.scanningInProgress
         }
         
-        self.scanningState = .awaiting
+        self.context.scanningState = .awaiting
         
         return AsyncStream(PeripheralScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
                 self.cbCentralManager.stopScan()
-                self.scanningState = .notScanning
+                self.context.scanningState = .notScanning
                 
                 Self.logger.info("Stopped scanning peripherals")
             }
             
-            self.scanningState = .scanning(continuation: continuation)
+            self.context.scanningState = .scanning(continuation: continuation)
             
             self.cbCentralManager.scanForPeripherals(withServices: serviceUUIDs, options: options)
             
@@ -108,7 +97,7 @@ public class CentralManager {
     
     /// Asks the central manager to stop scanning for peripherals.
     public func stopScan() {
-        guard case ScanningState.scanning(let continuation) = self.scanningState else {
+        guard case CentralManagerScanningState.scanning(let continuation) = self.context.scanningState else {
             Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
             return
         }
@@ -120,13 +109,13 @@ public class CentralManager {
     
     /// Establishes a local connection to a peripheral.
     public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
-        guard await !self.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) else {
+        guard await !self.context.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) else {
             Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
 
             throw BluetoothError.connectingInProgress
         }
         
-        try await self.connectToPeripheralExecutor.enqueue(withKey: peripheral.identifier) {
+        try await self.context.connectToPeripheralExecutor.enqueue(withKey: peripheral.identifier) {
             Self.logger.info("Connecting to \(peripheral.identifier)")
             
             self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
@@ -141,13 +130,13 @@ public class CentralManager {
             throw BluetoothError.noConnectionToPeripheralExists
         }
         
-        guard await !self.cancelPeripheralConnectionExecutor.hasWorkForKey(peripheral.identifier) else {
+        guard await !self.context.cancelPeripheralConnectionExecutor.hasWorkForKey(peripheral.identifier) else {
             Self.logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
 
             throw BluetoothError.disconnectingInProgress
         }
 
-        try await self.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
+        try await self.context.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
             Self.logger.info("Disconnecting from \(peripheral.identifier)")
             
             self.cbCentralManager.cancelPeripheralConnection(peripheral.cbPeripheral)
@@ -181,16 +170,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }()
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        guard let centralManager = self.centralManager else { return }
-        
-        if centralManager.bluetoothState != .poweredOn && centralManager.isScanning {
-            centralManager.stopScan()
-        }
-        
         Task {
-            guard let isBluetoothReadyResult = Utils.isBluetoothReady(centralManager.bluetoothState) else { return }
+            guard let isBluetoothReadyResult = Utils.isBluetoothReady(central.state) else { return }
 
-            await centralManager.waitUntilReadyExecutor.flush(isBluetoothReadyResult)
+            await self.context.waitUntilReadyExecutor.flush(isBluetoothReadyResult)
         }
     }
     
@@ -205,8 +188,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             advertisementData: advertisementData,
             rssi: RSSI
         )
-        guard let centralManager = self.centralManager else { return }
-        guard case CentralManager.ScanningState.scanning(let continuation) = centralManager.scanningState else {
+        guard case CentralManagerScanningState.scanning(let continuation) = self.context.scanningState else {
             Self.logger.info("Ignoring peripheral '\(peripheralScanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
             return
         }
@@ -220,7 +202,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             Self.logger.info("Connected to peripheral \(peripheral.identifier)")
             
             do {
-                try await self.centralManager?.connectToPeripheralExecutor.setWorkCompletedForKey(
+                try await self.context.connectToPeripheralExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result:.success(())
                 )
             } catch {
@@ -240,7 +222,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             )
             
             do {
-                try await self.centralManager?.connectToPeripheralExecutor.setWorkCompletedForKey(
+                try await self.context.connectToPeripheralExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result: .failure(BluetoothError.errorConnectingToPeripheral(error: error))
                 )
             } catch {
@@ -257,7 +239,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
-                try await self.centralManager?.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
+                try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result: result
                 )
                 Self.logger.info("Disconnected from \(peripheral.identifier)")
