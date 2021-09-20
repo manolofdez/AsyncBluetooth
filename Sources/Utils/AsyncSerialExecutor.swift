@@ -33,6 +33,7 @@ actor AsyncSerialExecutor<Value> {
     private var currentWork: CurrentWork?
     private var queue: [QueuedWork] = []
     
+    
     /// Places work in the queue to be executed. If the queue is empty it will be executed. Otherwise it will
     /// get dequeued (and executed) when all previously queued work has finished.
     /// This function will await until the given block is executed and will only resume after clients provide a Result
@@ -123,6 +124,8 @@ actor AsyncSerialExecutor<Value> {
     }
     
     deinit {
+        guard !self.queue.isEmpty || self.isExecutingWork else { return }
+        
         if !self.queue.isEmpty {
             AsyncBlockQueueConstants.logger.warning("AsyncBlockQueue deinitialized with pending work.")
         }
