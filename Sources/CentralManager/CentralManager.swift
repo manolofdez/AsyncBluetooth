@@ -25,7 +25,7 @@ public class CentralManager {
     }
     
     public var isScanning: Bool {
-        switch self.context.scanningState {
+        switch self.context.scanState {
         case .notScanning:
             return false
         default:
@@ -71,23 +71,23 @@ public class CentralManager {
     public func scanForPeripherals(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil
-    ) throws -> AsyncStream<PeripheralScanData> {
+    ) throws -> AsyncStream<ScanData> {
         guard !self.isScanning else {
             Self.logger.error("Scanning failed: already in progress")
             throw BluetoothError.scanningInProgress
         }
         
-        self.context.scanningState = .awaiting
+        self.context.scanState = .awaiting
         
-        return AsyncStream(PeripheralScanData.self) { continuation in
+        return AsyncStream(ScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
                 self.cbCentralManager.stopScan()
-                self.context.scanningState = .notScanning
+                self.context.scanState = .notScanning
                 
                 Self.logger.info("Stopped scanning peripherals")
             }
             
-            self.context.scanningState = .scanning(continuation: continuation)
+            self.context.scanState = .scanning(continuation: continuation)
             
             self.cbCentralManager.scanForPeripherals(withServices: serviceUUIDs, options: options)
             
@@ -97,7 +97,7 @@ public class CentralManager {
     
     /// Asks the central manager to stop scanning for peripherals.
     public func stopScan() {
-        guard case CentralManagerScanningState.scanning(let continuation) = self.context.scanningState else {
+        guard case ScanState.scanning(let continuation) = self.context.scanState else {
             Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
             return
         }
@@ -183,18 +183,18 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         advertisementData: [String : Any],
         rssi RSSI: NSNumber
     ) {
-        let peripheralScanData = PeripheralScanData(
+        let scanData = ScanData(
             peripheral: Peripheral(cbPeripheral),
             advertisementData: advertisementData,
             rssi: RSSI
         )
-        guard case CentralManagerScanningState.scanning(let continuation) = self.context.scanningState else {
-            Self.logger.info("Ignoring peripheral '\(peripheralScanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
+        guard case ScanState.scanning(let continuation) = self.context.scanState else {
+            Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
             return
         }
-        continuation.yield(peripheralScanData)
+        continuation.yield(scanData)
         
-        Self.logger.info("Found peripheral \(peripheralScanData.peripheral.identifier)")
+        Self.logger.info("Found peripheral \(scanData.peripheral.identifier)")
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
