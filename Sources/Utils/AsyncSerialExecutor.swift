@@ -4,6 +4,8 @@ import Foundation
 /// until the client completes it before taking on the next work.
 actor AsyncSerialExecutor<Value> {
     
+    typealias Constants = AsyncSerialExecutorConstants
+    
     enum AsyncSerialExecutor: Error {
         case notExecutingWork
         case canceled
@@ -26,6 +28,7 @@ actor AsyncSerialExecutor<Value> {
         self.currentWork != nil
     }
     
+    /// Whether we're executing or have queued work.
     var hasWork: Bool {
         self.isExecutingWork || self.queue.count > 0
     }
@@ -89,7 +92,7 @@ actor AsyncSerialExecutor<Value> {
     }
     
     /// Grabs the next available work from the queue. If it's not canceled, executes it. Otherwise sends a
-    /// `AsyncBlockQueueError.canceled` error.
+    /// `AsyncSerialExecutor.canceled` error.
     private func dequeueIfNecessary() {
         guard !self.isExecutingWork && !self.queue.isEmpty else { return }
         
@@ -127,11 +130,11 @@ actor AsyncSerialExecutor<Value> {
         guard !self.queue.isEmpty || self.isExecutingWork else { return }
         
         if !self.queue.isEmpty {
-            AsyncBlockQueueConstants.logger.warning("AsyncBlockQueue deinitialized with pending work.")
+            Constants.logger.warning("AsyncSerialExecutor deinitialized with pending work.")
         }
         
         if self.isExecutingWork {
-            AsyncBlockQueueConstants.logger.warning("AsyncBlockQueue deinitialized while executing work.")
+            Constants.logger.warning("AsyncSerialExecutor deinitialized while executing work.")
         }
         
         self.flush(.failure(AsyncSerialExecutor.executorDeinitialized))

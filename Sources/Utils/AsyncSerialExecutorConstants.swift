@@ -1,10 +1,10 @@
 import Foundation
 import os.log
 
-struct AsyncBlockQueueConstants {
+struct AsyncSerialExecutorConstants {
     static let logger = Logger(
         subsystem: Bundle(for: Peripheral.self).bundleIdentifier ?? "",
-        category: "asyncBlockQueue"
+        category: "asyncSerialExecutor"
     )
     
     private init() {}
