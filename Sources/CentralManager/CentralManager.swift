@@ -25,12 +25,7 @@ public class CentralManager {
     }
     
     public var isScanning: Bool {
-        switch self.context.scanState {
-        case .notScanning:
-            return false
-        default:
-            return true
-        }
+        self.context.isScanning
     }
     
     private let cbCentralManager: CBCentralManager
@@ -71,33 +66,27 @@ public class CentralManager {
     public func scanForPeripherals(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil
-    ) throws -> AsyncStream<ScanData> {
-        guard !self.isScanning else {
-            Self.logger.error("Scanning failed: already in progress")
-            throw BluetoothError.scanningInProgress
-        }
-        
-        self.context.scanState = .awaiting
-        
-        return AsyncStream(ScanData.self) { continuation in
-            continuation.onTermination = { @Sendable _ in
-                self.cbCentralManager.stopScan()
-                self.context.scanState = .notScanning
-                
-                Self.logger.info("Stopped scanning peripherals")
+    ) async throws -> AsyncStream<ScanData> {
+        try await withCheckedThrowingContinuation { continuation in
+            Task {
+                do {
+                    try await self.context.scanForPeripheralsExecutor.enqueue {
+                        let scanDataStream = self.createScanDataStream(
+                            withServices: serviceUUIDs,
+                            options: options
+                        )
+                        continuation.resume(returning: scanDataStream)
+                    }
+                } catch {
+                    continuation.resume(throwing: error)
+                }
             }
-            
-            self.context.scanState = .scanning(continuation: continuation)
-            
-            self.cbCentralManager.scanForPeripherals(withServices: serviceUUIDs, options: options)
-            
-            Self.logger.info("Scanning for peripherals...")
         }
     }
     
     /// Asks the central manager to stop scanning for peripherals.
-    public func stopScan() {
-        guard case ScanState.scanning(let continuation) = self.context.scanState else {
+    public func stopScan() async {
+        guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
             Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
             return
         }
@@ -158,6 +147,37 @@ public class CentralManager {
     public static func supports(_ features: CBCentralManager.Feature) -> Bool {
         CBCentralManager.supports(features)
     }
+    
+    /// Creates the async stream where scan data will get added as part of scanning for peripherals.
+    /// - Note: The stream is responsable for starting scan.
+    private func createScanDataStream(
+        withServices serviceUUIDs: [CBUUID]?,
+        options: [String : Any]? = nil
+    ) -> AsyncStream<ScanData> {
+        AsyncStream(ScanData.self) { continuation in
+            continuation.onTermination = { @Sendable _ in
+                Task {
+                    self.cbCentralManager.stopScan()
+                    await self.context.scanForPeripheralsContext.setContinuation(nil)
+                    Self.logger.info("Stopped scanning peripherals")
+
+                    do {
+                        try await self.context.scanForPeripheralsExecutor.setWorkCompletedWithResult(.success(()))
+                    } catch {
+                        Self.logger.warning("Scanning stopped without a continuation!")
+                    }
+                }
+            }
+
+            Task {
+                await self.context.scanForPeripheralsContext.setContinuation(continuation)
+
+                self.cbCentralManager.scanForPeripherals(withServices: serviceUUIDs, options: options)
+
+                Self.logger.info("Scanning for peripherals...")
+            }
+        }
+    }
 }
 
 // MARK: CBCentralManagerDelegate
@@ -183,18 +203,20 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         advertisementData: [String : Any],
         rssi RSSI: NSNumber
     ) {
-        let scanData = ScanData(
-            peripheral: Peripheral(cbPeripheral),
-            advertisementData: advertisementData,
-            rssi: RSSI
-        )
-        guard case ScanState.scanning(let continuation) = self.context.scanState else {
-            Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
-            return
+        Task {
+            let scanData = ScanData(
+                peripheral: Peripheral(cbPeripheral),
+                advertisementData: advertisementData,
+                rssi: RSSI
+            )
+            guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
+                Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
+                return
+            }
+            continuation.yield(scanData)
+            
+            Self.logger.info("Found peripheral \(scanData.peripheral.identifier)")
         }
-        continuation.yield(scanData)
-        
-        Self.logger.info("Found peripheral \(scanData.peripheral.identifier)")
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
