@@ -25,7 +25,7 @@ try await centralManager.waitUntilReady()
 
 var scanDataStream = try await centralManager.scanForPeripherals(withServices: nil)
 for await scanData in scanDataStream {
-	// Check scan data...
+    // Check scan data...
 }
 
 await centralManager.stopScan()
@@ -47,8 +47,8 @@ parse the data into the appropriate type.
 
 ```swift
 let value: String? = try await peripheral.readValue(
-	forCharacteristicWithUUID: UUID(uuidString: "")!,
-	ofServiceWithUUID: UUID(uuidString: "")!
+    forCharacteristicWithUUID: UUID(uuidString: "")!,
+    ofServiceWithUUID: UUID(uuidString: "")!
 )
 
 ```
