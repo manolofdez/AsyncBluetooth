@@ -156,10 +156,11 @@ public class CentralManager {
     ) -> AsyncStream<ScanData> {
         AsyncStream(ScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
+                self.cbCentralManager.stopScan()
+                Self.logger.info("Stopped scanning peripherals")
+                
                 Task {
-                    self.cbCentralManager.stopScan()
                     await self.context.scanForPeripheralsContext.setContinuation(nil)
-                    Self.logger.info("Stopped scanning peripherals")
 
                     do {
                         try await self.context.scanForPeripheralsExecutor.setWorkCompletedWithResult(.success(()))
