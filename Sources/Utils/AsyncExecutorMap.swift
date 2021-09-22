@@ -1,3 +1,5 @@
+//  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
+
 import Foundation
 
 /// Executes work in parallel when keys are different, and serially when there's work queued for a given key.

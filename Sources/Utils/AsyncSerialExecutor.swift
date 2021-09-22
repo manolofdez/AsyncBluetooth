@@ -1,3 +1,5 @@
+//  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
+
 import Foundation
 
 /// Executes queued work serially, in the order they where added (FIFO). After work has started, this class will await

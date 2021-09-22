@@ -1,3 +1,5 @@
+//  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
+
 import Foundation
 
 /// Converts from and to Data?. This is useful for automatically returning data of the expected type, since
