@@ -53,6 +53,11 @@ let value: String? = try await peripheral.readValue(
 
 ```
 
+## Examples
+
+You can find practical, tasty recipes for how to use `AsyncBluetooth` in the 
+[AsyncBluetooth Cookbok](https://github.com/manolofdez/AsyncBluetoothCookbook).
+
 ## Installation
 
 ### Swift Package Manager
