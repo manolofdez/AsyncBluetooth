@@ -48,7 +48,11 @@ public class Peripheral {
     
     /// A Boolean value that indicates if the remote device has authorization to receive data over ANCS protocol.
     public var ancsAuthorized: Bool {
+        #if os(iOS)
         self.cbPeripheral.ancsAuthorized
+        #else
+        false
+        #endif
     }
     
     let cbPeripheral: CBPeripheral
