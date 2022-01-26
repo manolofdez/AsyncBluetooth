@@ -67,9 +67,10 @@ to your Package Dependencies.
 
 ## Requirements
 
-- iOS 15.0+
-- MacOS 12.0+
+- iOS 14.0+
+- MacOS 11.0+
 - Swift 5
+- Xcoce 13.2.1+
 
 ## License
 
