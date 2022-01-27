@@ -31,4 +31,5 @@ class CentralManagerContext {
     }
     private(set) lazy var connectToPeripheralExecutor = AsyncExecutorMap<UUID, Void>()
     private(set) lazy var cancelPeripheralConnectionExecutor = AsyncExecutorMap<UUID, Void>()
+    private(set) lazy var eventSubject = PassthroughSubject<CentralManagerEvent, Never>()
 }
