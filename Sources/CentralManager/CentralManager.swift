@@ -2,6 +2,7 @@
 
 import Foundation
 import CoreBluetooth
+import Combine
 import os.log
 
 /// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
@@ -29,6 +30,10 @@ public class CentralManager {
     public var isScanning: Bool {
         self.context.isScanning
     }
+    
+    public lazy var eventPublisher: AnyPublisher<CentralManagerEvent, Never> = {
+        self.context.eventSubject.eraseToAnyPublisher()
+    }()
     
     private let cbCentralManager: CBCentralManager
     private let context: CentralManagerContext
@@ -194,6 +199,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task {
+            defer {
+                self.context.eventSubject.send(.didUpdateState(state: central.state))
+            }
+            
             guard let isBluetoothReadyResult = Utils.isBluetoothReady(central.state) else { return }
 
             await self.context.waitUntilReadyExecutor.flush(isBluetoothReadyResult)
@@ -271,6 +280,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             } catch {
                 Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
             }
+            
+            self.context.eventSubject.send(
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), error: error)
+            )
         }
     }
 }
