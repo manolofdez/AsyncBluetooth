@@ -42,10 +42,9 @@ public class CentralManager {
     // MARK: Constructors
 
     public init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
-        self.cbCentralManager = CBCentralManager(delegate: nil, queue: dispatchQueue, options: options)
         self.context = CentralManagerContext()
         self.cbCentralManagerDelegate = DelegateWrapper(context: self.context)
-        self.cbCentralManager.delegate = self.cbCentralManagerDelegate
+        self.cbCentralManager = CBCentralManager(delegate: cbCentralManagerDelegate, queue: dispatchQueue, options: options)
     }
     
     // MARK: Public
