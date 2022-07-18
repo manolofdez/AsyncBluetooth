@@ -6,7 +6,8 @@ let package = Package(
     name: "AsyncBluetooth",
     platforms: [
         .macOS("11.0"),
-        .iOS("14.0")
+        .iOS("14.0"),
+        .watchOS("7.0")
     ],
     products: [
         .library(
@@ -26,5 +27,6 @@ let package = Package(
             dependencies: ["AsyncBluetooth"],
             path: "Tests"
         ),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
