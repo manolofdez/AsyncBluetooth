@@ -241,6 +241,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             } catch {
                 Self.logger.error("Received onDidConnect without a continuation!")
             }
+            
+            self.context.eventSubject.send(
+                .didConnectPeripheral(peripheral: Peripheral(peripheral))
+            )
         }
     }
     
