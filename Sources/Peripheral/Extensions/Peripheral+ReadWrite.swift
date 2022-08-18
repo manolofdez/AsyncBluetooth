@@ -54,6 +54,24 @@ extension Peripheral {
         try await self.writeValue(data, for: characteristic, type: type)
     }
     
+    /// Sets notifications or indications for the value of a characteristic with a given identifier of a service
+    /// with a given identifier
+    /// - Note: If the service or characteristic has not been discovered, it will attempt to discover it.
+    public func setNotifyValue(
+        _ enabled: Bool,
+        forCharacteristicWithUUID characteristicUUID: UUID,
+        ofServiceWithUUID serviceUUID: UUID
+    ) async throws {
+        guard let characteristic = try await self.findCharacteristic(
+            uuid: characteristicUUID,
+            ofServiceWithUUID: serviceUUID
+        ) else {
+            throw BluetoothError.characteristicNotFound
+        }
+        
+        try await self.setNotifyValue(enabled, for: characteristic)
+    }
+    
     private func findCharacteristic(
         uuid characteristicUUID: UUID,
         ofServiceWithUUID serviceUUID: UUID
