@@ -208,6 +208,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         }
     }
     
+    func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
+        self.context.eventSubject.send(.willRestoreState(state: dict))
+    }
+    
     func centralManager(
         _ cbCentralManager: CBCentralManager,
         didDiscover cbPeripheral: CBPeripheral,
@@ -239,8 +243,12 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
                     peripheral.identifier, result:.success(())
                 )
             } catch {
-                Self.logger.error("Received onDidConnect without a continuation!")
+                Self.logger.info("Received onDidConnect without a continuation")
             }
+            
+            self.context.eventSubject.send(
+                .didConnectPeripheral(peripheral: Peripheral(peripheral))
+            )
         }
     }
     
