@@ -214,12 +214,13 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         advertisementData: [String : Any],
         rssi RSSI: NSNumber
     ) {
+        let scanData = ScanData(
+            peripheral: Peripheral(cbPeripheral),
+            advertisementData: advertisementData,
+            rssi: RSSI
+        )
+
         Task {
-            let scanData = ScanData(
-                peripheral: Peripheral(cbPeripheral),
-                advertisementData: advertisementData,
-                rssi: RSSI
-            )
             guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
                 Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
                 return
