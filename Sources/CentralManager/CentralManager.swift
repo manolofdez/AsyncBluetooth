@@ -131,6 +131,11 @@ public class CentralManager {
             throw BluetoothError.disconnectingInProgress
         }
 
+        // cancel ongoing connection
+        if await self.context.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) {
+            try await self.context.connectToPeripheralExecutor.setWorkCompletedForKey(peripheral.identifier, result: .failure(BluetoothError.cancelledConnectionToPeripheral))
+        }
+        
         try await self.context.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
             Self.logger.info("Disconnecting from \(peripheral.identifier)")
             
