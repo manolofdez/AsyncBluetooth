@@ -151,11 +151,6 @@ public class Peripheral {
         try await self.readValue(for: descriptor.cbDescriptor)
     }
     
-    /// Writes the value of a characteristic descriptor.
-    public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
-        try await self.writeValue(data, for: descriptor)
-    }
-    
     // MARK: Internal: Services
     
     func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService) async throws {
