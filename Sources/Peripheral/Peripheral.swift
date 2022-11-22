@@ -285,19 +285,18 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
            // characteristic.value is Data() and it will get trampled if allowed to run async.
            self.context.characteristicValueUpdatedSubject.send( Characteristic(characteristic) )
 
-        } else {
+        }
            
-            Task {
-                do {
-                    let result = CallbackUtils.result(for: (), error: error)
-                    try await self.context.readCharacteristicValueExecutor.setWorkCompletedForKey(
-                        characteristic.uuid, result: result
-                    )
-                } catch {
-                    Self.logger.warning("Received UpdateValue result for characteristic without a continuation")
-                }
+        Task {
+            do {
+                let result = CallbackUtils.result(for: (), error: error)
+                try await self.context.readCharacteristicValueExecutor.setWorkCompletedForKey(
+                    characteristic.uuid, result: result
+                )
+            } catch {
+                Self.logger.warning("Received UpdateValue result for characteristic without a continuation")
             }
-       }
+        }
     }
     
     func peripheral(_ cbPeripheral: CBPeripheral, didWriteValueFor characteristic: CBCharacteristic, error: Error?) {
