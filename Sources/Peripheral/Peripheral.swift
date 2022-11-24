@@ -279,6 +279,14 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
     }
     
     func peripheral(_ cbPeripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+        
+        if characteristic.isNotifying {
+           
+           // characteristic.value is Data() and it will get trampled if allowed to run async.
+           self.context.characteristicValueUpdatedSubject.send( Characteristic(characteristic) )
+
+        }
+           
         Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
@@ -286,17 +294,8 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
                     characteristic.uuid, result: result
                 )
             } catch {
-                if !characteristic.isNotifying {
-                    Self.logger.warning("Received UpdateValue result for characteristic without a continuation")
-                }
+                Self.logger.warning("Received UpdateValue result for characteristic without a continuation")
             }
-            
-            guard characteristic.isNotifying else {
-                return
-            }
-            self.context.characteristicValueUpdatedSubject.send(
-                Characteristic(characteristic)
-            )
         }
     }
     

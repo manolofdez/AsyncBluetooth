@@ -131,6 +131,11 @@ public class CentralManager {
             throw BluetoothError.disconnectingInProgress
         }
 
+        // cancel ongoing connection
+        if await self.context.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) {
+            try await self.context.connectToPeripheralExecutor.setWorkCompletedForKey(peripheral.identifier, result: .failure(BluetoothError.cancelledConnectionToPeripheral))
+        }
+        
         try await self.context.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
             Self.logger.info("Disconnecting from \(peripheral.identifier)")
             
@@ -218,12 +223,13 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         advertisementData: [String : Any],
         rssi RSSI: NSNumber
     ) {
+        let scanData = ScanData(
+            peripheral: Peripheral(cbPeripheral),
+            advertisementData: advertisementData,
+            rssi: RSSI
+        )
+
         Task {
-            let scanData = ScanData(
-                peripheral: Peripheral(cbPeripheral),
-                advertisementData: advertisementData,
-                rssi: RSSI
-            )
             guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
                 Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
                 return

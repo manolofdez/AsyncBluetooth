@@ -6,6 +6,7 @@ public enum BluetoothError: Error {
     case bluetoothUnavailable
     case connectingInProgress
     case disconnectingInProgress
+    case cancelledConnectionToPeripheral
     case errorConnectingToPeripheral(error: Error?)
     case characteristicNotFound
     case unableToParseCharacteristicValue
