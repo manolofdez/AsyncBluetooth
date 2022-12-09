@@ -294,6 +294,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
                     characteristic.uuid, result: result
                 )
             } catch {
+                guard !characteristic.isNotifying else { return }
                 Self.logger.warning("Received UpdateValue result for characteristic without a continuation")
             }
         }
