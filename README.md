@@ -23,7 +23,7 @@ let centralManager = CentralManager()
 
 try await centralManager.waitUntilReady()
 
-var scanDataStream = try await centralManager.scanForPeripherals(withServices: nil)
+let scanDataStream = try await centralManager.scanForPeripherals(withServices: nil)
 for await scanData in scanDataStream {
     // Check scan data...
 }
@@ -42,7 +42,7 @@ try await centralManager.connect(peripheral, options: nil)
 
 ### Read value from characteristic
 
-You can use convenience functions for reading and writing to characteristics. They will find the characteristic by using a `UUID`, and 
+You can use convenience functions for reading characteristics. They will find the characteristic by using a `UUID`, and 
 parse the data into the appropriate type.
 
 ```swift
@@ -52,6 +52,20 @@ let value: String? = try await peripheral.readValue(
 )
 
 ```
+
+### Write value to characteristic
+
+Simlar to reading, we have convenience functions for writing to characteristics.
+
+```swift
+try await peripheral.writeValue(
+    value,
+    forCharacteristicWithUUID: UUID(uuidString: "")!,
+    ofServiceWithUUID: UUID(uuidString: "")!
+)
+
+```
+
 
 ## Examples
 
