@@ -50,13 +50,13 @@ actor AsyncSerialExecutor<Value> {
         let queuedWorkID = UUID()
         
         return try await withTaskCancellationHandler {
-            Task.detached { [weak self] in
-                await self?.cancelWork(id: queuedWorkID)
-            }
-        } operation: {
             try await withCheckedThrowingContinuation { continuation in
                 self.queue.append(QueuedWork(id: queuedWorkID, block: block, continuation: continuation))
                 self.scheduleDequeue()
+            }
+        } onCancel: {
+            Task.detached { [weak self] in
+                await self?.cancelWork(id: queuedWorkID)
             }
         }
     }
