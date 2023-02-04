@@ -127,18 +127,4 @@ actor AsyncSerialExecutor<Value> {
         guard let index = self.queue.firstIndex(where: { $0.id == id }) else { return }
         self.queue[index].isCanceled = true
     }
-    
-    deinit {
-        guard !self.queue.isEmpty || self.isExecutingWork else { return }
-        
-        if !self.queue.isEmpty {
-            Constants.logger.warning("AsyncSerialExecutor deinitialized with pending work.")
-        }
-        
-        if self.isExecutingWork {
-            Constants.logger.warning("AsyncSerialExecutor deinitialized while executing work.")
-        }
-        
-        self.flush(.failure(AsyncSerialExecutor.executorDeinitialized))
-    }
 }
