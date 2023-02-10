@@ -18,5 +18,5 @@ class PeripheralContext {
     private(set) lazy var discoverDescriptorsExecutor = AsyncExecutorMap<CBUUID, Void>()
     private(set) lazy var readDescriptorValueExecutor = AsyncExecutorMap<CBUUID, Void>()
     private(set) lazy var writeDescriptorValueExecutor = AsyncExecutorMap<CBUUID, Void>()
-    private(set) lazy var openL2CAPChannelExecutor = AsyncSerialExecutor<Void>()
+    private(set) lazy var openL2CAPChannelExecutor = AsyncSerialExecutor<CBL2CAPChannel?>()
 }

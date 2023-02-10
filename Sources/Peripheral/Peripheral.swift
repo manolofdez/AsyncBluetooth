@@ -92,7 +92,7 @@ public class Peripheral {
     
     /// Attempts to open an L2CAP channel to the peripheral using the supplied Protocol/Service Multiplexer (PSM).
     @available(iOS 11.0, *)
-    public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws {
+    public func openL2CAPChannel(_ PSM: CBL2CAPPSM) async throws -> CBL2CAPChannel? {
         try await self.context.openL2CAPChannelExecutor.enqueue { [weak self] in
             self?.cbPeripheral.openL2CAPChannel(PSM)
         }
@@ -376,7 +376,7 @@ extension Peripheral.DelegateWrapper: CBPeripheralDelegate {
     func peripheral(_ cbPeripheral: CBPeripheral, didOpen channel: CBL2CAPChannel?, error: Error?) {
         Task {
             do {
-                let result = CallbackUtils.result(for: (), error: error)
+                let result = CallbackUtils.result(for: channel, error: error)
                 try await self.context.openL2CAPChannelExecutor.setWorkCompletedWithResult(result)
             } catch {
                 Self.logger.warning("Received OpenChannel result without a continuation")
