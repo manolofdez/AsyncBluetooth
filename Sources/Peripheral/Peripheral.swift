@@ -55,14 +55,14 @@ public class Peripheral {
         #endif
     }
     
-    let cbPeripheral: CBPeripheral
+    public let cbPeripheral: CBPeripheral
     
     private let context: PeripheralContext
     /// The delegate object that will receive `cbPeripheral`.
     /// - Note: We need to hold on to it because `cbPeripheral` has a weak reference to it.
     private let cbPeripheralDelegate: DelegateWrapper
     
-    init(_ cbPeripheral: CBPeripheral) {
+    public init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
         
         // By reusing the cbPeripheralDelegate and context, we guarantee that we will enqueue calls to the peripheral
