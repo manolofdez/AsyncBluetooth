@@ -103,7 +103,7 @@ public class CentralManager {
     }
     
     /// Establishes a local connection to a peripheral.
-    public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
+    public func connect(_ peripheral: AsyncPeripheral, options: [String : Any]? = nil) async throws {
         guard await !self.context.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) else {
             Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
 
@@ -118,7 +118,7 @@ public class CentralManager {
     }
     
     /// Cancels an active or pending local connection to a peripheral.
-    public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
+    public func cancelPeripheralConnection(_ peripheral: AsyncPeripheral) async throws {
         let peripheralState = peripheral.cbPeripheral.state
         guard peripheralState == CBPeripheralState.connecting || peripheralState == CBPeripheralState.connected else {
             Self.logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.identifier) exists nor being attempted")
@@ -144,13 +144,13 @@ public class CentralManager {
     }
     
     /// Returns a list of known peripherals by their identifiers.
-    public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral] {
-        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { Peripheral($0) }
+    public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [AsyncPeripheral] {
+        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { AsyncPeripheral($0) }
     }
     
     /// Returns a list of the peripherals connected to the system whose services match a given set of criteria.
-    public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
-        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0) }
+    public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [AsyncPeripheral] {
+        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { AsyncPeripheral($0) }
     }
 
     /// Returns a Boolean that indicates whether the device supports a specific set of features.
@@ -224,7 +224,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         rssi RSSI: NSNumber
     ) {
         let scanData = ScanData(
-            peripheral: Peripheral(cbPeripheral),
+            peripheral: AsyncPeripheral(cbPeripheral),
             advertisementData: advertisementData,
             rssi: RSSI
         )
@@ -253,7 +253,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             }
             
             self.context.eventSubject.send(
-                .didConnectPeripheral(peripheral: Peripheral(peripheral))
+                .didConnectPeripheral(peripheral: AsyncPeripheral(peripheral))
             )
         }
     }
@@ -295,7 +295,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             }
             
             self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), error: error)
+                .didDisconnectPeripheral(peripheral: AsyncPeripheral(peripheral), error: error)
             )
         }
     }

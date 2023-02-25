@@ -3,7 +3,7 @@
 import Foundation
 import CoreBluetooth
 
-extension Peripheral {
+extension AsyncPeripheral {
     /// Reads and parses the value of a characteristic with a given identifier, of a service with a
     /// given identifier.
     /// - Note: If the service or characteristic has not been discovered, it will attempt to discover it.

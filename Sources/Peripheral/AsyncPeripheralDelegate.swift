@@ -4,18 +4,18 @@ import Foundation
 import CoreBluetooth
 import os.log
 
-class PeripheralDelegate: NSObject {
+class AsyncPeripheralDelegate: NSObject {
     private static let logger = Logger(
-        subsystem: Bundle(for: PeripheralDelegate.self).bundleIdentifier ?? "",
+        subsystem: Bundle(for: AsyncPeripheralDelegate.self).bundleIdentifier ?? "",
         category: "peripheralDelegate"
     )
 
-    let context = PeripheralContext()
+    let context = AsyncPeripheralContext()
 }
 
 // MARK: CBPeripheralDelegate
 
-extension PeripheralDelegate: CBPeripheralDelegate {
+extension AsyncPeripheralDelegate: CBPeripheralDelegate {
     func peripheral(_ cbPeripheral: CBPeripheral, didReadRSSI RSSI: NSNumber, error: Error?) {
         Task {
             do {

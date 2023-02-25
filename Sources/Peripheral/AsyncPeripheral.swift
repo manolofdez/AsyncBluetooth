@@ -7,10 +7,10 @@ import os.log
 
 /// A remote peripheral device.
 /// - This class acts as a wrapper around `CBPeripheral`.
-public class Peripheral {
+public class AsyncPeripheral {
         
-    private static let logger = Logger(
-        subsystem: Bundle(for: Peripheral.self).bundleIdentifier ?? "",
+    static let logger = Logger(
+        subsystem: Bundle(for: AsyncPeripheral.self).bundleIdentifier ?? "",
         category: "peripheral"
     )
     
@@ -49,13 +49,13 @@ public class Peripheral {
     
     public let cbPeripheral: CBPeripheral
     
-    private var context: PeripheralContext {
+    private var context: AsyncPeripheralContext {
         cbPeripheralDelegate.context
     }
     
     /// The delegate object that will receive `cbPeripheral` callbacks.
     /// - Note: We need to hold on to it because `cbPeripheral` has a weak reference to it.
-    private let cbPeripheralDelegate: PeripheralDelegate
+    private let cbPeripheralDelegate: AsyncPeripheralDelegate
     
     public init(_ cbPeripheral: CBPeripheral) {
         self.cbPeripheral = cbPeripheral
@@ -63,7 +63,7 @@ public class Peripheral {
         // By reusing the cbPeripheralDelegate and context, we guarantee that we will enqueue calls to the peripheral
         // using the same context, and that won't lose any callbacks from the CBPeripheralDelegate.
         // This is important because we can create multiple Peripherals for a single cbPeripheral.
-        if let cbPeripheralDelegate = cbPeripheral.delegate as? PeripheralDelegate {
+        if let cbPeripheralDelegate = cbPeripheral.delegate as? AsyncPeripheralDelegate {
             self.cbPeripheralDelegate = cbPeripheralDelegate
             return
         }
@@ -72,7 +72,7 @@ public class Peripheral {
             Self.logger.warning("Replacing delegate for peripheral \(cbPeripheral.identifier) can cause problems.")
         }
         
-        self.cbPeripheralDelegate = PeripheralDelegate()
+        self.cbPeripheralDelegate = AsyncPeripheralDelegate()
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
     

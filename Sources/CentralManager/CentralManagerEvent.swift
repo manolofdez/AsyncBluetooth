@@ -6,6 +6,6 @@ import CoreBluetooth
 public enum CentralManagerEvent {
     case didUpdateState(state: CBManagerState)
     case willRestoreState(state: [String: Any])
-    case didConnectPeripheral(peripheral: Peripheral)
-    case didDisconnectPeripheral(peripheral: Peripheral, error: Error?)
+    case didConnectPeripheral(peripheral: AsyncPeripheral)
+    case didDisconnectPeripheral(peripheral: AsyncPeripheral, error: Error?)
 }
