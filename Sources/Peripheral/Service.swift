@@ -30,7 +30,7 @@ public struct Service {
         self.cbService.characteristics?.map { Characteristic($0) }
     }
     
-    init(_ cbService: CBService) {
+    public init(_ cbService: CBService) {
         self.cbService = cbService
     }
 }
