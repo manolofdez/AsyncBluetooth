@@ -153,7 +153,7 @@ public class Peripheral {
     
     /// Writes the value of a characteristic descriptor.
     public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
-        try await self.writeValue(data, for: descriptor)
+        try await self.writeValue(data, for: descriptor.cbDescriptor)
     }
     
     // MARK: Internal: Services
