@@ -5,7 +5,9 @@ import CoreBluetooth
 
 public protocol Peripheral {
     
+    associatedtype ServiceType: Service
     associatedtype CharacteristicType: Characteristic
+    associatedtype DescriptorType: Descriptor
     
     /// The unique, persistent identifier associated with the peer.
     var identifier: UUID { get }
@@ -24,7 +26,7 @@ public protocol Peripheral {
     var state: CBPeripheralState { get }
 
     /// A list of `CBService` objects that have been discovered on the peripheral.
-    var services: [CBService]? { get }
+    var services: [ServiceType]? { get }
 
     /// YES if the remote device has space to send a write without response. If this value is NO, the value will be set to YES after
     /// the current writes have been flushed, and `peripheralIsReadyToSendWriteWithoutResponse:` will be called.
@@ -53,14 +55,14 @@ public protocol Peripheral {
     ///                                   slower and not recommended.
     /// - Parameter service: A GATT service.
     /// - SeeAlso: peripheral:didDiscoverIncludedServicesForService:error:
-    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService)
+    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: ServiceType)
 
     /// Discovers the specified characteristic(s) of _service_.
     /// - Parameter characteristicUUIDs: A list of `CBUUID` objects representing the characteristic types to be discovered.
     ///                                  If _nil_, all characteristics of _service_ will be discovered.
     /// - Parameter service: A GATT service.
     /// - SeeAlso: peripheral:didDiscoverCharacteristicsForService:error:
-    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService)
+    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: ServiceType)
     
     /// Reads the characteristic value for _characteristic_.
     /// - Parameter characteristic: A GATT characteristic.
@@ -107,14 +109,14 @@ public protocol Peripheral {
     /// Reads the value of _descriptor_.
     /// - Parameter descriptor: A GATT characteristic descriptor.
     /// - SeeAlso: peripheral:didUpdateValueForDescriptor:error:
-    func readValue(for descriptor: CBDescriptor)
+    func readValue(for descriptor: DescriptorType)
 
     /// Writes _data_ to _descriptor_'s value. Client characteristic configuration descriptors cannot be written using
     /// this method, and should instead use `setNotifyValue:forCharacteristic:`.
     /// - Parameter data: The value to write.
     /// - Parameter descriptor: A GATT characteristic descriptor.
     /// - SeeAlso: peripheral:didWriteValueForCharacteristic:error:
-    func writeValue(_ data: Data, for descriptor: CBDescriptor)
+    func writeValue(_ data: Data, for descriptor: DescriptorType)
 
     /// Attempt to open an L2CAP channel to the peripheral using the supplied PSM.
     /// - Parameter PSM: The PSM of the channel to open
