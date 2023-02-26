@@ -26,8 +26,8 @@ public struct Service {
     }
     
     /// A list of characteristics discovered in this service.
-    public var discoveredCharacteristics: [Characteristic]? {
-        self.cbService.characteristics?.map { Characteristic($0) }
+    public var discoveredCharacteristics: [AsyncCharacteristic]? {
+        self.cbService.characteristics?.map { AsyncCharacteristic($0) }
     }
     
     public init(_ cbService: CBService) {

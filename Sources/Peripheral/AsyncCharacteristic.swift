@@ -5,7 +5,7 @@ import CoreBluetooth
 
 /// A characteristic of a remote peripheral’s service.
 /// - This class acts as a wrapper around `CBCharacteristic`.
-public struct Characteristic {
+public struct AsyncCharacteristic {
     public let cbCharacteristic: CBCharacteristic
     
     public init(_ cbCharacteristic: CBCharacteristic) {

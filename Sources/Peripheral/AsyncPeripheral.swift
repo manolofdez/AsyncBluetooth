@@ -15,7 +15,7 @@ public class AsyncPeripheral {
     )
     
     /// Publishes characteristics that are notifying of value changes.
-    public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
+    public lazy var characteristicValueUpdatedPublisher: AnyPublisher<AsyncCharacteristic, Never> = {
         self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }()
     

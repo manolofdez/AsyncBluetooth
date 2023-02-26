@@ -69,7 +69,7 @@ extension AsyncPeripheralDelegate: CBPeripheralDelegate {
         if characteristic.isNotifying {
            
            // characteristic.value is Data() and it will get trampled if allowed to run async.
-           self.context.characteristicValueUpdatedSubject.send( Characteristic(characteristic) )
+           self.context.characteristicValueUpdatedSubject.send(AsyncCharacteristic(characteristic))
 
         }
            
