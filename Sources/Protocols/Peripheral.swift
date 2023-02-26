@@ -4,7 +4,6 @@ import Foundation
 import CoreBluetooth
 
 public protocol Peripheral {
-    
     associatedtype ServiceType: Service
     associatedtype CharacteristicType: Characteristic
     associatedtype DescriptorType: Descriptor
