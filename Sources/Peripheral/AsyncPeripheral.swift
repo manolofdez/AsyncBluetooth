@@ -29,8 +29,8 @@ public class AsyncPeripheral {
     }
     
     /// A list of a peripheral’s discovered services.
-    public var discoveredServices: [Service]? {
-        self.cbPeripheral.services?.map { Service($0) }
+    public var discoveredServices: [AsyncService]? {
+        self.cbPeripheral.services?.map { AsyncService($0) }
     }
     
     /// The connection state of the peripheral.
