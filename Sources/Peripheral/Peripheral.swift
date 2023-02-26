@@ -5,6 +5,8 @@ import CoreBluetooth
 
 public protocol Peripheral {
     
+    associatedtype CharacteristicType: Characteristic
+    
     /// The unique, persistent identifier associated with the peer.
     var identifier: UUID { get }
     
@@ -63,7 +65,7 @@ public protocol Peripheral {
     /// Reads the characteristic value for _characteristic_.
     /// - Parameter characteristic: A GATT characteristic.
     /// - SeeAlso: peripheral:didUpdateValueForCharacteristic:error:
-    func readValue(for characteristic: CBCharacteristic)
+    func readValue(for characteristic: CharacteristicType)
 
     /// The maximum amount of data, in bytes, that can be sent to a characteristic in a single write type.
     /// - SeeAlso: writeValue:forCharacteristic:type:
@@ -83,7 +85,7 @@ public protocol Peripheral {
     /// - SeeAlso: peripheralIsReadyToSendWriteWithoutResponse:
     /// - SeeAlso: canSendWriteWithoutResponse
     /// - SeeAlso: CBCharacteristicWriteType
-    func writeValue(_ data: Data, for characteristic: CBCharacteristic, type: CBCharacteristicWriteType)
+    func writeValue(_ data: Data, for characteristic: CharacteristicType, type: CBCharacteristicWriteType)
 
     /// Enables or disables notifications/indications for the characteristic value of _characteristic_. If _characteristic_ allows both, n
     /// otifications will be used.
@@ -95,12 +97,12 @@ public protocol Peripheral {
     /// - Parameter characteristic: The characteristic containing the client characteristic configuration descriptor.
     /// - SeeAlso: peripheral:didUpdateNotificationStateForCharacteristic:error:
     /// - SeeAlso: CBConnectPeripheralOptionNotifyOnNotificationKey
-    func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic)
+    func setNotifyValue(_ enabled: Bool, for characteristic: CharacteristicType)
 
     /// Discovers the characteristic descriptor(s) of _characteristic_.
     /// - Parameter characteristic: A GATT characteristic.
     /// - SeeAlso: peripheral:didDiscoverDescriptorsForCharacteristic:error:
-    func discoverDescriptors(for characteristic: CBCharacteristic)
+    func discoverDescriptors(for characteristic: CharacteristicType)
 
     /// Reads the value of _descriptor_.
     /// - Parameter descriptor: A GATT characteristic descriptor.
