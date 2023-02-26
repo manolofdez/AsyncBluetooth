@@ -4,6 +4,8 @@ import Foundation
 import CoreBluetooth
 
 public protocol Characteristic {
+    
+    associatedtype DescriptorType: Descriptor
 
     /// The Bluetooth-specific UUID of the characteristic.
     var uuid: CBUUID { get }
@@ -14,7 +16,7 @@ public protocol Characteristic {
     var value: Data? { get }
 
     /// A list of the descriptors discovered in this characteristic.
-    var descriptors: [CBDescriptor]? { get }
+    var descriptors: [DescriptorType]? { get }
 
     /// A Boolean value that indicates whether the characteristic is currently notifying a subscribed central
     /// of its value.
