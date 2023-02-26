@@ -27,8 +27,8 @@ public struct AsyncCharacteristic {
     }
 
     /// A list of the descriptors discovered in this characteristic.
-    public var descriptors: [Descriptor]? {
-        self.cbCharacteristic.descriptors?.map { Descriptor($0) }
+    public var descriptors: [AsyncDescriptor]? {
+        self.cbCharacteristic.descriptors?.map { AsyncDescriptor($0) }
     }
 
     /// A Boolean value that indicates whether the characteristic is currently notifying a subscribed central
