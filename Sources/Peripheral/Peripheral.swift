@@ -49,8 +49,11 @@ public class Peripheral {
     
     public let cbPeripheral: CBPeripheral
     
-    private let context: PeripheralContext
-    /// The delegate object that will receive `cbPeripheral`.
+    private var context: PeripheralContext {
+        cbPeripheralDelegate.context
+    }
+    
+    /// The delegate object that will receive `cbPeripheral` callbacks.
     /// - Note: We need to hold on to it because `cbPeripheral` has a weak reference to it.
     private let cbPeripheralDelegate: PeripheralDelegate
     
@@ -61,7 +64,6 @@ public class Peripheral {
         // using the same context, and that won't lose any callbacks from the CBPeripheralDelegate.
         // This is important because we can create multiple Peripherals for a single cbPeripheral.
         if let cbPeripheralDelegate = cbPeripheral.delegate as? PeripheralDelegate {
-            self.context = cbPeripheralDelegate.context
             self.cbPeripheralDelegate = cbPeripheralDelegate
             return
         }
@@ -70,8 +72,7 @@ public class Peripheral {
             Self.logger.warning("Replacing delegate for peripheral \(cbPeripheral.identifier) can cause problems.")
         }
         
-        self.context = PeripheralContext()
-        self.cbPeripheralDelegate = PeripheralDelegate(context: self.context)
+        self.cbPeripheralDelegate = PeripheralDelegate()
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
     

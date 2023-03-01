@@ -10,11 +10,7 @@ class PeripheralDelegate: NSObject {
         category: "peripheralDelegate"
     )
 
-    let context: PeripheralContext
-    
-    init(context: PeripheralContext) {
-        self.context = context
-    }
+    let context = PeripheralContext()
 }
 
 // MARK: CBPeripheralDelegate
