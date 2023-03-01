@@ -18,7 +18,7 @@ extension Peripheral {
             throw BluetoothError.characteristicNotFound
         }
         
-        try await self.readValue(for: characteristic)
+        try await self.readValue(for: Characteristic(characteristic))
         
         guard let data = characteristic.value else {
             return nil
@@ -51,7 +51,7 @@ extension Peripheral {
             throw BluetoothError.unableToConvertValueToData
         }
         
-        try await self.writeValue(data, for: characteristic, type: type)
+        try await self.writeValue(data, for: Characteristic(characteristic), type: type)
     }
     
     /// Sets notifications or indications for the value of a characteristic with a given identifier of a service
@@ -69,7 +69,7 @@ extension Peripheral {
             throw BluetoothError.characteristicNotFound
         }
         
-        try await self.setNotifyValue(enabled, for: characteristic)
+        try await self.setNotifyValue(enabled, for: Characteristic(characteristic))
     }
     
     private func findCharacteristic(
@@ -89,7 +89,7 @@ extension Peripheral {
             return characteristic
         }
         
-        try await self.discoverCharacteristics([characteristicCBUUID], for: service)
+        try await self.discoverCharacteristics([characteristicCBUUID], for: Service(service))
         
         return discoveredCharacteristic()
     }

@@ -90,7 +90,7 @@ public class Peripheral {
         }
     }
     
-    // MARK: Public: Services
+    // MARK: Services
     
     /// Discovers the specified services of the peripheral.
     public func discoverServices(_ serviceUUIDs: [CBUUID]?) async throws {
@@ -101,10 +101,12 @@ public class Peripheral {
     
     /// Discovers the specified included services of a previously-discovered service.
     public func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: Service) async throws {
-        try await self.discoverIncludedServices(includedServiceUUIDs, for: service.cbService)
+        try await self.context.discoverIncludedServicesExecutor.enqueue(withKey: service.uuid) { [weak self] in
+            self?.cbPeripheral.discoverIncludedServices(includedServiceUUIDs, for: service.cbService)
+        }
     }
     
-    // MARK: Public: Characteristics
+    // MARK: Characteristics
     
     /// The maximum amount of data, in bytes, you can send to a characteristic in a single write type.
     public func maximumWriteValueLength(for type: CBCharacteristicWriteType) -> Int {
@@ -113,104 +115,61 @@ public class Peripheral {
     
     /// Sets notifications or indications for the value of a specified characteristic.
     public func setNotifyValue(_ enabled: Bool, for characteristic: Characteristic) async throws {
-        try await self.setNotifyValue(enabled, for: characteristic.cbCharacteristic)
+        try await self.context.setNotifyValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+            self?.cbPeripheral.setNotifyValue(enabled, for: characteristic.cbCharacteristic)
+        }
     }
     
     /// Discovers the specified characteristics of a service.
     public func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: Service) async throws {
-        try await self.discoverCharacteristics(characteristicUUIDs, for: service.cbService)
+        try await self.context.discoverCharacteristicsExecutor.enqueue(withKey: service.uuid) { [weak self] in
+            self?.cbPeripheral.discoverCharacteristics(characteristicUUIDs, for: service.cbService)
+        }
+
     }
     
     /// Retrieves the value of a specified characteristic.
     public func readValue(for characteristic: Characteristic) async throws {
-        try await self.readValue(for: characteristic.cbCharacteristic)
+        try await self.context.readCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
+            self?.cbPeripheral.readValue(for: characteristic.cbCharacteristic)
+        }
     }
     
     /// Writes the value of a characteristic.
     public func writeValue(_ data: Data, for characteristic: Characteristic, type: CBCharacteristicWriteType) async throws {
-        try await self.writeValue(data, for: characteristic.cbCharacteristic, type: type)
-    }
-    
-    // MARK: Public Descriptors
-    
-    /// Discovers the descriptors of a characteristic.
-    public func discoverDescriptors(for characteristic: Characteristic) async throws {
-        try await self.discoverDescriptors(for: characteristic.cbCharacteristic)
-    }
-    
-    /// Retrieves the value of a specified characteristic descriptor.
-    public func readValue(for descriptor: Descriptor) async throws {
-        try await self.readValue(for: descriptor.cbDescriptor)
-    }
-    
-    /// Writes the value of a characteristic descriptor.
-    public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
-        try await self.writeValue(data, for: descriptor.cbDescriptor)
-    }
-    
-    // MARK: Internal: Services
-    
-    func discoverIncludedServices(_ includedServiceUUIDs: [CBUUID]?, for service: CBService) async throws {
-        try await self.context.discoverIncludedServicesExecutor.enqueue(withKey: service.uuid) { [weak self] in
-            self?.cbPeripheral.discoverIncludedServices(includedServiceUUIDs, for: service)
-        }
-    }
-    
-    // MARK: Internal: Characteristics
-    
-    func setNotifyValue(_ enabled: Bool, for characteristic: CBCharacteristic) async throws {
-        try await self.context.setNotifyValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
-            self?.cbPeripheral.setNotifyValue(enabled, for: characteristic)
-        }
-    }
-    
-    func discoverCharacteristics(_ characteristicUUIDs: [CBUUID]?, for service: CBService) async throws {
-        try await self.context.discoverCharacteristicsExecutor.enqueue(withKey: service.uuid) { [weak self] in
-            self?.cbPeripheral.discoverCharacteristics(characteristicUUIDs, for: service)
-        }
-    }
-    
-    func readValue(for characteristic: CBCharacteristic) async throws {
-        try await self.context.readCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
-            self?.cbPeripheral.readValue(for: characteristic)
-        }
-    }
-    
-    func writeValue(
-        _ data: Data,
-        for characteristic: CBCharacteristic,
-        type: CBCharacteristicWriteType
-    ) async throws {
         try await self.context.writeCharacteristicValueExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
             guard let self = self else { return }
             
-            self.cbPeripheral.writeValue(data, for: characteristic, type: type)
+            self.cbPeripheral.writeValue(data, for: characteristic.cbCharacteristic, type: type)
             
             guard type == .withoutResponse else {
                 return
             }
             
-            self.cbPeripheralDelegate.peripheral(self.cbPeripheral, didWriteValueFor: characteristic, error: nil)
+            self.cbPeripheralDelegate.peripheral(self.cbPeripheral, didWriteValueFor: characteristic.cbCharacteristic, error: nil)
         }
     }
     
-    // MARK: Internal: Descriptors
+    // MARK: Descriptors
     
-    func discoverDescriptors(for characteristic: CBCharacteristic) async throws {
+    /// Discovers the descriptors of a characteristic.
+    public func discoverDescriptors(for characteristic: Characteristic) async throws {
         try await self.context.discoverDescriptorsExecutor.enqueue(withKey: characteristic.uuid) { [weak self] in
-            self?.cbPeripheral.discoverDescriptors(for: characteristic)
+            self?.cbPeripheral.discoverDescriptors(for: characteristic.cbCharacteristic)
         }
     }
     
-    func readValue(for descriptor: CBDescriptor) async throws {
+    /// Retrieves the value of a specified characteristic descriptor.
+    public func readValue(for descriptor: Descriptor) async throws {
         try await self.context.readDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
-            self?.cbPeripheral.readValue(for: descriptor)
+            self?.cbPeripheral.readValue(for: descriptor.cbDescriptor)
         }
     }
     
-    func writeValue(_ data: Data, for descriptor: CBDescriptor) async throws {
+    /// Writes the value of a characteristic descriptor.
+    public func writeValue(_ data: Data, for descriptor: Descriptor) async throws {
         try await self.context.writeDescriptorValueExecutor.enqueue(withKey: descriptor.uuid) { [weak self] in
-            self?.cbPeripheral.writeValue(data, for: descriptor)
+            self?.cbPeripheral.writeValue(data, for: descriptor.cbDescriptor)
         }
     }
 }
