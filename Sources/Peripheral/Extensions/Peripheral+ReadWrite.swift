@@ -18,7 +18,7 @@ extension Peripheral {
             throw BluetoothError.characteristicNotFound
         }
         
-        try await self.readValue(for: Characteristic(characteristic))
+        try await self.readValue(for: characteristic)
         
         guard let data = characteristic.value else {
             return nil
@@ -51,7 +51,7 @@ extension Peripheral {
             throw BluetoothError.unableToConvertValueToData
         }
         
-        try await self.writeValue(data, for: Characteristic(characteristic), type: type)
+        try await self.writeValue(data, for: characteristic, type: type)
     }
     
     /// Sets notifications or indications for the value of a characteristic with a given identifier of a service
@@ -69,43 +69,51 @@ extension Peripheral {
             throw BluetoothError.characteristicNotFound
         }
         
-        try await self.setNotifyValue(enabled, for: Characteristic(characteristic))
+        try await self.setNotifyValue(enabled, for: characteristic)
     }
     
     private func findCharacteristic(
         uuid characteristicUUID: UUID,
         ofServiceWithUUID serviceUUID: UUID
-    ) async throws -> CBCharacteristic? {
+    ) async throws -> Characteristic? {
         guard let service = try await self.findService(uuid: serviceUUID) else {
             return nil
         }
         
         let characteristicCBUUID = CBUUID(nsuuid: characteristicUUID)
         let discoveredCharacteristic: () -> CBCharacteristic? = {
-            service.characteristics?.first(where: { $0.uuid == characteristicCBUUID })
+            service.cbService.characteristics?.first(where: { $0.uuid == characteristicCBUUID })
         }
         
-        if let characteristic = discoveredCharacteristic() {
-            return characteristic
+        if let cbCharacteristic = discoveredCharacteristic() {
+            return Characteristic(cbCharacteristic)
         }
         
-        try await self.discoverCharacteristics([characteristicCBUUID], for: Service(service))
+        try await self.discoverCharacteristics([characteristicCBUUID], for: service)
         
-        return discoveredCharacteristic()
+        guard let cbCharacteristic = discoveredCharacteristic() else {
+            return nil
+        }
+        
+        return Characteristic(cbCharacteristic)
     }
     
-    private func findService(uuid: UUID) async throws -> CBService? {
+    private func findService(uuid: UUID) async throws -> Service? {
         let cbUUID = CBUUID(nsuuid: uuid)
         let discoveredService: () -> CBService? = {
             self.cbPeripheral.services?.first(where: { $0.uuid == cbUUID })
         }
         
-        if let service = discoveredService() {
-            return service
+        if let cbService = discoveredService() {
+            return Service(cbService)
         }
         
         try await self.discoverServices([cbUUID])
         
-        return discoveredService()
+        guard let cbService = discoveredService() else {
+            return nil
+        }
+        
+        return Service(cbService)
     }
 }
