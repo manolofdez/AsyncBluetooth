@@ -5,7 +5,7 @@ import CoreBluetooth
 
 /// A collection of data and associated behaviors that accomplish a function or feature of a device.
 /// - This class acts as a wrapper around `CBService`.
-public struct AsyncService {
+public struct CBServiceWrapper {
     let cbService: CBService
     
     /// The Bluetooth-specific UUID of the service.
@@ -21,13 +21,13 @@ public struct AsyncService {
     }
     
     /// A list of included services discovered in this service.
-    public var discoveredIncludedServices: [AsyncService]? {
-        self.cbService.includedServices?.map { AsyncService($0) }
+    public var discoveredIncludedServices: [CBServiceWrapper]? {
+        self.cbService.includedServices?.map { CBServiceWrapper($0) }
     }
     
     /// A list of characteristics discovered in this service.
-    public var discoveredCharacteristics: [AsyncCharacteristic]? {
-        self.cbService.characteristics?.map { AsyncCharacteristic($0) }
+    public var discoveredCharacteristics: [CBCharacteristicWrapper]? {
+        self.cbService.characteristics?.map { CBCharacteristicWrapper($0) }
     }
     
     public init(_ cbService: CBService) {

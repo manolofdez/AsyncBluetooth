@@ -5,7 +5,7 @@ import CoreBluetooth
 
 /// An object that provides further information about a remote peripheral’s characteristic.
 /// - This class acts as a wrapper for `CBDescriptor`.
-public struct AsyncDescriptor {
+public struct CBDescriptorWrapper: Descriptor {
     let cbDescriptor: CBDescriptor
     
     init(_ cbDescriptor: CBDescriptor) {

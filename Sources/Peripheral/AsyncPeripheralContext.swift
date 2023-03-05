@@ -6,7 +6,7 @@ import Combine
 
 /// Contains the objects necessary to track a Peripheral's commands.
 class AsyncPeripheralContext {
-    private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<AsyncCharacteristic, Never>()
+    private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<CBCharacteristicWrapper, Never>()
     
     private(set) lazy var readRSSIExecutor = AsyncSerialExecutor<NSNumber>()
     private(set) lazy var discoverServiceExecutor = AsyncSerialExecutor<Void>()

@@ -5,7 +5,7 @@ import CoreBluetooth
 
 /// A characteristic of a remote peripheral’s service.
 /// - This class acts as a wrapper around `CBCharacteristic`.
-public struct AsyncCharacteristic {
+public struct CBCharacteristicWrapper: Characteristic {
     public let cbCharacteristic: CBCharacteristic
     
     public init(_ cbCharacteristic: CBCharacteristic) {
@@ -27,8 +27,8 @@ public struct AsyncCharacteristic {
     }
 
     /// A list of the descriptors discovered in this characteristic.
-    public var descriptors: [AsyncDescriptor]? {
-        self.cbCharacteristic.descriptors?.map { AsyncDescriptor($0) }
+    public var descriptors: [CBDescriptorWrapper]? {
+        self.cbCharacteristic.descriptors?.map { CBDescriptorWrapper($0) }
     }
 
     /// A Boolean value that indicates whether the characteristic is currently notifying a subscribed central

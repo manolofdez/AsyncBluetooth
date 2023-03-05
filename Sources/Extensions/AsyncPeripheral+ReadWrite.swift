@@ -67,7 +67,7 @@ extension AsyncPeripheral {
     private func findCharacteristic(
         uuid characteristicUUID: UUID,
         ofServiceWithUUID serviceUUID: UUID
-    ) async throws -> AsyncCharacteristic? {
+    ) async throws -> CBCharacteristicWrapper? {
         guard let service = try await self.findService(uuid: serviceUUID) else {
             return nil
         }
@@ -78,7 +78,7 @@ extension AsyncPeripheral {
         }
         
         if let cbCharacteristic = discoveredCharacteristic() {
-            return AsyncCharacteristic(cbCharacteristic)
+            return CBCharacteristicWrapper(cbCharacteristic)
         }
         
         try await self.discoverCharacteristics([characteristicCBUUID], for: service)
@@ -87,17 +87,17 @@ extension AsyncPeripheral {
             return nil
         }
         
-        return AsyncCharacteristic(cbCharacteristic)
+        return CBCharacteristicWrapper(cbCharacteristic)
     }
     
-    private func findService(uuid: UUID) async throws -> AsyncService? {
+    private func findService(uuid: UUID) async throws -> CBServiceWrapper? {
         let cbUUID = CBUUID(nsuuid: uuid)
         let discoveredService: () -> CBService? = {
             self.cbPeripheral.services?.first(where: { $0.uuid == cbUUID })
         }
         
         if let cbService = discoveredService() {
-            return AsyncService(cbService)
+            return CBServiceWrapper(cbService)
         }
         
         try await self.discoverServices([cbUUID])
@@ -106,6 +106,6 @@ extension AsyncPeripheral {
             return nil
         }
         
-        return AsyncService(cbService)
+        return CBServiceWrapper(cbService)
     }
 }
