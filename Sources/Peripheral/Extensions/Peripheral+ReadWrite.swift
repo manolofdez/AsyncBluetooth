@@ -20,15 +20,7 @@ extension Peripheral {
         
         try await self.readValue(for: characteristic)
         
-        guard let data = characteristic.value else {
-            return nil
-        }
-        
-        guard let value = Value.fromData(data) else {
-            throw BluetoothError.unableToParseCharacteristicValue
-        }
-        
-        return value
+        return try characteristic.parsedValue()
     }
     
     /// Writes and parses the value of a characteristic with a given identifier, of a service with a
