@@ -40,6 +40,26 @@ connected.
 try await centralManager.connect(peripheral, options: nil)
 ```
 
+### Subscribe to central manager events
+
+The central manager publishes several events. You can subscribe to them by using the `eventPublisher`.
+
+```swift
+centralManager.eventPublisher
+    .sink {
+        switch $0 {
+        case .didConnectPeripheral(let peripheral):
+            print("Connected to \(peripheral.identifier)")
+        default:
+            break
+        }
+    }
+    .store(in: &cancellables)
+```
+
+See [CentralManagerEvent](Sources/CentralManager/CentralManagerEvent.swift) to see available events.
+
+
 ### Read value from characteristic
 
 You can use convenience functions for reading characteristics. They will find the characteristic by using a `UUID`, and 
@@ -55,7 +75,7 @@ let value: String? = try await peripheral.readValue(
 
 ### Write value to characteristic
 
-Simlar to reading, we have convenience functions for writing to characteristics.
+Similar to reading, we have convenience functions for writing to characteristics.
 
 ```swift
 try await peripheral.writeValue(
@@ -64,6 +84,21 @@ try await peripheral.writeValue(
     ofServiceWithUUID: UUID(uuidString: "")!
 )
 
+```
+
+### Subscribe to a characteristic
+
+To get notified when a characteristic's value is updated, we provide a publisher you can subscribe to:
+
+```swift
+let characteristicUUID = CBUUID()
+peripheral.characteristicValueUpdatedPublisher
+    .filter { $0.uuid == characteristicUUID }
+    .map { try? $0.parsedValue() as String? } // replace `String?` with your type
+    .sink { value in
+        print("Value updated to '\(value)'")
+    }
+    .store(in: &cancellables)
 ```
 
 
