@@ -24,12 +24,41 @@ class CentralManagerContext {
     
     private(set) var isScanning = false
     
-    private(set) lazy var waitUntilReadyExecutor = AsyncSerialExecutor<Void>()
-    private(set) lazy var scanForPeripheralsExecutor = AsyncSerialExecutor<Void>()
     private(set) lazy var scanForPeripheralsContext = ScanForPeripheralsContext { [weak self] isScanning in
         self?.isScanning = isScanning
     }
-    private(set) lazy var connectToPeripheralExecutor = AsyncExecutorMap<UUID, Void>()
-    private(set) lazy var cancelPeripheralConnectionExecutor = AsyncExecutorMap<UUID, Void>()
+    
     private(set) lazy var eventSubject = PassthroughSubject<CentralManagerEvent, Never>()
+    
+    private(set) lazy var waitUntilReadyExecutor = {
+        let executor = AsyncSerialExecutor<Void>()
+        flushableExecutors.append(executor)
+        return executor
+    }()
+    
+    private(set) lazy var scanForPeripheralsExecutor = {
+        let executor = AsyncSerialExecutor<Void>()
+        flushableExecutors.append(executor)
+        return executor
+    }()
+    
+    private(set) lazy var connectToPeripheralExecutor = {
+        let executor = AsyncExecutorMap<UUID, Void>()
+        flushableExecutors.append(executor)
+        return executor
+    }()
+    
+    private(set) lazy var cancelPeripheralConnectionExecutor = {
+        let executor = AsyncExecutorMap<UUID, Void>()
+        flushableExecutors.append(executor)
+        return executor
+    }()
+    
+    private var flushableExecutors: [FlushableExecutor] = []
+    
+    func flush(error: Error) async throws {
+        for flushableExecutor in flushableExecutors {
+            try await flushableExecutor.flush(error: error)
+        }
+    }
 }
