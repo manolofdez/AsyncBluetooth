@@ -154,6 +154,7 @@ public class CentralManager {
     }
     
     /// Cancels all pending operations, stops scanning and awaiting for any responses.
+    /// - Note: Operation for Peripherals will not be cancelled. To do that, call `cancelAllOperations()` on the `Peripheral`.
     public func cancelAllOperations() async throws {
         if isScanning {
             await self.stopScan()
