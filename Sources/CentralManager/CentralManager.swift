@@ -152,6 +152,15 @@ public class CentralManager {
     public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
         self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0) }
     }
+    
+    /// Cancels all pending operations, stops scanning and awaiting for any responses.
+    /// - Note: Operation for Peripherals will not be cancelled. To do that, call `cancelAllOperations()` on the `Peripheral`.
+    public func cancelAllOperations() async throws {
+        if isScanning {
+            await self.stopScan()
+        }
+        try await self.context.flush(error: BluetoothError.operationCancelled)
+    }
 
     /// Returns a Boolean that indicates whether the device supports a specific set of features.
     @available(macOS, unavailable)

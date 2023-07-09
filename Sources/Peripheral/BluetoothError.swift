@@ -12,4 +12,5 @@ public enum BluetoothError: Error {
     case unableToParseCharacteristicValue
     case unableToConvertValueToData
     case noConnectionToPeripheralExists
+    case operationCancelled
 }

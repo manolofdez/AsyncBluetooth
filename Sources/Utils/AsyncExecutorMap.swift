@@ -43,7 +43,7 @@ actor AsyncExecutorMap<Key, Value> where Key: Hashable {
         self.executors[key] = nil
     }
     
-    /// Sends the given result to all queued and executing work.
+    /// Sends the given result to all queued and executing work from the given key.
     func flush(key: Key, result: Result<Value, Error>) async throws {
         guard let executor = self.executors[key] else {
             throw AsyncExecutorMapError.executorNotFound
@@ -58,5 +58,13 @@ actor AsyncExecutorMap<Key, Value> where Key: Hashable {
     
     func hasWorkForKey(_ key: Key) async -> Bool {
         await self.executors[key]?.hasWork == true
+    }
+}
+
+extension AsyncExecutorMap: FlushableExecutor {
+    func flush(error: Error) async throws {
+        for key in self.executors.keys {
+            try await self.flush(key: key, result: .failure(error))
+        }
     }
 }
