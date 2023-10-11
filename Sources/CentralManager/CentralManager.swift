@@ -56,7 +56,16 @@ public class CentralManager {
         guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
             Self.logger.info("Waiting for bluetooth to be ready...")
             
-            try await self.context.waitUntilReadyExecutor.enqueue {}
+            try await self.context.waitUntilReadyExecutor.enqueue { [weak self] in
+                // Note we need to check again here in case the Bluetooth state was updated after we last
+                // checked but before the work was enqueued. Otherwise we could wait indefinitely.
+                guard let self = self, let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
+                    return
+                }
+                Task {
+                    await self.context.waitUntilReadyExecutor.flush(isBluetoothReadyResult)
+                }
+            }
             return
         }
 
