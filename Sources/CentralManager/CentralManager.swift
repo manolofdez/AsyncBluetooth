@@ -84,8 +84,15 @@ public class CentralManager {
     ) async throws -> AsyncStream<ScanData> {
         try await withCheckedThrowingContinuation { continuation in
             Task {
+                var isContinuationUsed = false
                 do {
                     try await self.context.scanForPeripheralsExecutor.enqueue {
+                        guard !isContinuationUsed else {
+                            return
+                        }
+                        
+                        isContinuationUsed = true
+                        
                         let scanDataStream = self.createScanDataStream(
                             withServices: serviceUUIDs,
                             options: options
@@ -93,6 +100,12 @@ public class CentralManager {
                         continuation.resume(returning: scanDataStream)
                     }
                 } catch {
+                    guard !isContinuationUsed else {
+                        return
+                    }
+                    
+                    isContinuationUsed = true
+                    
                     continuation.resume(throwing: error)
                 }
             }
