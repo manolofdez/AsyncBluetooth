@@ -84,8 +84,17 @@ public class CentralManager {
     ) async throws -> AsyncStream<ScanData> {
         try await withCheckedThrowingContinuation { continuation in
             Task {
+                // Note that the enqueue call will remain awaiting until the stream is terminated. This
+                // means that we can end up in a state were the continuation is used to send the stream,
+                // and yet we want to throw an error (e.g. calling `cancellAllOperations` while scanning).
+                // To avoid crashing, we check whether the continuation has been used before.
+                var isContinuationUsed = false
+                
                 do {
                     try await self.context.scanForPeripheralsExecutor.enqueue {
+                        guard !isContinuationUsed else { return }
+                        isContinuationUsed = true
+                        
                         let scanDataStream = self.createScanDataStream(
                             withServices: serviceUUIDs,
                             options: options
@@ -93,6 +102,9 @@ public class CentralManager {
                         continuation.resume(returning: scanDataStream)
                     }
                 } catch {
+                    guard !isContinuationUsed else { return }
+                    isContinuationUsed = true
+                    
                     continuation.resume(throwing: error)
                 }
             }
