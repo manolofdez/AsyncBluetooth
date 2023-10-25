@@ -12,7 +12,12 @@ public struct Service {
     public var uuid: CBUUID {
         self.cbService.uuid
     }
-    
+
+    /// The name or description of this service.
+    public var description: String {
+        self.cbService.description
+    }
+
     /// A Boolean value that indicates whether the type of service is primary or secondary. A primary service
     /// describes the primary function of a device. A secondary service describes a service that’s relevant only
     /// in the context of another service that references it.

@@ -9,11 +9,8 @@ import os.log
 /// - This class acts as a wrapper around `CBPeripheral`.
 public class Peripheral {
         
-    private static let logger = Logger(
-        subsystem: Bundle(for: Peripheral.self).bundleIdentifier ?? "",
-        category: "peripheral"
-    )
-    
+    public let logger: AsyncBluetoothLogging
+
     /// Publishes characteristics that are notifying of value changes.
     public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
         self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
@@ -23,11 +20,18 @@ public class Peripheral {
     public var identifier: UUID {
         self.cbPeripheral.identifier
     }
-    
+
+    /// Use this in debug messages or anywhere the full UUID is too verbose
+      var shortId: String { "\(identifier.uuidString.suffix(6))" }
+
     public var name: String? {
         self.cbPeripheral.name
     }
-    
+
+    public var debugDescription: String {
+        return "ID \(shortId), name: \(name ?? "(unknown)")"
+    }
+
     /// A list of a peripheral’s discovered services.
     public var discoveredServices: [Service]? {
         self.cbPeripheral.services?.map { Service($0) }
@@ -57,9 +61,10 @@ public class Peripheral {
     /// - Note: We need to hold on to it because `cbPeripheral` has a weak reference to it.
     private let cbPeripheralDelegate: PeripheralDelegate
     
-    public init(_ cbPeripheral: CBPeripheral) {
+    public init(_ cbPeripheral: CBPeripheral, logger: AsyncBluetoothLogging) {
         self.cbPeripheral = cbPeripheral
-        
+        self.logger = logger
+
         // By reusing the cbPeripheralDelegate and context, we guarantee that we will enqueue calls to the peripheral
         // using the same context, and that won't lose any callbacks from the CBPeripheralDelegate.
         // This is important because we can create multiple Peripherals for a single cbPeripheral.
@@ -69,10 +74,10 @@ public class Peripheral {
         }
         
         if cbPeripheral.delegate != nil {
-            Self.logger.warning("Replacing delegate for peripheral \(cbPeripheral.identifier) can cause problems.")
+            logger.warning("Replacing delegate for peripheral \(cbPeripheral.identifier) can cause problems.")
         }
         
-        self.cbPeripheralDelegate = PeripheralDelegate()
+        self.cbPeripheralDelegate = PeripheralDelegate(logger: logger)
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
     }
     
@@ -95,7 +100,25 @@ public class Peripheral {
     public func cancelAllOperations() async throws {
         try await self.context.flush(error: BluetoothError.operationCancelled)
     }
-    
+
+    // MARK: Everything
+    /// Discovers:
+    /// - all services for a peripheral
+    /// - all characteristics for each service
+    /// - all descriptors for each characteristic
+    /// Returns async only after all these discovery operations complete.
+    public func discoverEverything() async throws {
+      try await discoverServices(nil)
+      guard let discoveredServices = discoveredServices else { return }
+      for service in discoveredServices {
+        try await discoverCharacteristics(nil, for: service)
+        guard let discoveredCharacteristics = service.discoveredCharacteristics else { return }
+        for characteristic in discoveredCharacteristics {
+          try await discoverDescriptors(for: characteristic)
+        }
+      }
+    }
+
     // MARK: Services
     
     /// Discovers the specified services of the peripheral.

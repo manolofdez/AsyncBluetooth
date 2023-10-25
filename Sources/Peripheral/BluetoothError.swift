@@ -3,6 +3,7 @@
 import Foundation
 
 public enum BluetoothError: Error {
+    case invalidUUID
     case bluetoothUnavailable
     case connectingInProgress
     case disconnectingInProgress

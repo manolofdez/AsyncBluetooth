@@ -12,16 +12,13 @@ public class CentralManager {
     
     fileprivate class DelegateWrapper: NSObject {
         private let context: CentralManagerContext
-        
-        init(context: CentralManagerContext) {
+        private let logger: AsyncBluetoothLogging
+
+        init(context: CentralManagerContext, logger: AsyncBluetoothLogging) {
             self.context = context
+            self.logger = logger
         }
     }
-    
-    private static let logger = Logger(
-        subsystem: Bundle(for: CentralManager.self).bundleIdentifier ?? "",
-        category: "centralManager"
-    )
     
     public var bluetoothState: CBManagerState {
         self.cbCentralManager.state
@@ -38,13 +35,17 @@ public class CentralManager {
     private let cbCentralManager: CBCentralManager
     private let context: CentralManagerContext
     private let cbCentralManagerDelegate: CBCentralManagerDelegate
-    
+    private let logger: AsyncBluetoothLogging
+
     // MARK: Constructors
 
-    public init(dispatchQueue: DispatchQueue? = nil, options: [String: Any]? = nil) {
+    public init(dispatchQueue: DispatchQueue? = nil,
+                logger: AsyncBluetoothLogging,
+                options: [String: Any]? = nil) {
         self.context = CentralManagerContext()
-        self.cbCentralManagerDelegate = DelegateWrapper(context: self.context)
+        self.cbCentralManagerDelegate = DelegateWrapper(context: self.context, logger: logger)
         self.cbCentralManager = CBCentralManager(delegate: cbCentralManagerDelegate, queue: dispatchQueue, options: options)
+        self.logger = logger
     }
     
     // MARK: Public
@@ -54,7 +55,7 @@ public class CentralManager {
     /// unsupported or unauthorized, an error will be thrown. Otherwise we'll continue.
     public func waitUntilReady() async throws {
         guard let isBluetoothReadyResult = Utils.isBluetoothReady(self.bluetoothState) else {
-            Self.logger.info("Waiting for bluetooth to be ready...")
+            logger.info("Waiting for bluetooth to be ready...")
             
             try await self.context.waitUntilReadyExecutor.enqueue { [weak self] in
                 // Note we need to check again here in case the Bluetooth state was updated after we last
@@ -114,11 +115,11 @@ public class CentralManager {
     /// Asks the central manager to stop scanning for peripherals.
     public func stopScan() async {
         guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
-            Self.logger.warning("Unable to stop scanning because the central manager is not scanning!")
+            logger.warning("Unable to stop scanning because the central manager is not scanning!")
             return
         }
         
-        Self.logger.info("Stopping scan...")
+        logger.info("Stopping scan...")
         
         continuation.finish()
     }
@@ -126,13 +127,13 @@ public class CentralManager {
     /// Establishes a local connection to a peripheral.
     public func connect(_ peripheral: Peripheral, options: [String : Any]? = nil) async throws {
         guard await !self.context.connectToPeripheralExecutor.hasWorkForKey(peripheral.identifier) else {
-            Self.logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
+            logger.error("Unable to connect to \(peripheral.identifier) because a connection attempt is already in progress")
 
             throw BluetoothError.connectingInProgress
         }
         
         try await self.context.connectToPeripheralExecutor.enqueue(withKey: peripheral.identifier) {
-            Self.logger.info("Connecting to \(peripheral.identifier)")
+            self.logger.info("Connecting to \(peripheral.identifier)")
             
             self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
         }
@@ -142,12 +143,12 @@ public class CentralManager {
     public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
         let peripheralState = peripheral.cbPeripheral.state
         guard peripheralState == CBPeripheralState.connecting || peripheralState == CBPeripheralState.connected else {
-            Self.logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.identifier) exists nor being attempted")
+            logger.error("Unable to cancel connection: no connection to peripheral \(peripheral.identifier) exists nor being attempted")
             throw BluetoothError.noConnectionToPeripheralExists
         }
         
         guard await !self.context.cancelPeripheralConnectionExecutor.hasWorkForKey(peripheral.identifier) else {
-            Self.logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
+            logger.error("Unable to disconnect from \(peripheral.identifier) because a disconnection attempt is already in progress")
 
             throw BluetoothError.disconnectingInProgress
         }
@@ -158,7 +159,7 @@ public class CentralManager {
         }
         
         try await self.context.cancelPeripheralConnectionExecutor.enqueue(withKey: peripheral.identifier) {
-            Self.logger.info("Disconnecting from \(peripheral.identifier)")
+            self.logger.info("Disconnecting from \(peripheral.identifier)")
             
             self.cbCentralManager.cancelPeripheralConnection(peripheral.cbPeripheral)
         }
@@ -166,12 +167,12 @@ public class CentralManager {
     
     /// Returns a list of known peripherals by their identifiers.
     public func retrievePeripherals(withIdentifiers identifiers: [UUID]) -> [Peripheral] {
-        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { Peripheral($0) }
+        self.cbCentralManager.retrievePeripherals(withIdentifiers: identifiers).map { Peripheral($0, logger: logger) }
     }
     
     /// Returns a list of the peripherals connected to the system whose services match a given set of criteria.
     public func retrieveConnectedPeripherals(withServices serviceUUIDs: [CBUUID]) -> [Peripheral] {
-        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0) }
+        self.cbCentralManager.retrieveConnectedPeripherals(withServices: serviceUUIDs).map { Peripheral($0, logger: logger) }
     }
     
     /// Cancels all pending operations, stops scanning and awaiting for any responses.
@@ -198,7 +199,7 @@ public class CentralManager {
         AsyncStream(ScanData.self) { continuation in
             continuation.onTermination = { @Sendable _ in
                 self.cbCentralManager.stopScan()
-                Self.logger.info("Stopped scanning peripherals")
+                self.logger.info("Stopped scanning peripherals")
                 
                 Task {
                     await self.context.scanForPeripheralsContext.setContinuation(nil)
@@ -206,7 +207,7 @@ public class CentralManager {
                     do {
                         try await self.context.scanForPeripheralsExecutor.setWorkCompletedWithResult(.success(()))
                     } catch {
-                        Self.logger.warning("Scanning stopped without a continuation!")
+                        self.logger.warning("Scanning stopped without a continuation!")
                     }
                 }
             }
@@ -216,7 +217,7 @@ public class CentralManager {
 
                 self.cbCentralManager.scanForPeripherals(withServices: serviceUUIDs, options: options)
 
-                Self.logger.info("Scanning for peripherals...")
+                logger.info("Scanning for peripherals...")
             }
         }
     }
@@ -226,11 +227,7 @@ public class CentralManager {
 
 extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     private typealias Utils = CentralManagerUtils
-    
-    private static var logger: Logger = {
-        CentralManager.logger
-    }()
-    
+
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         Task {
             defer {
@@ -254,36 +251,37 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         rssi RSSI: NSNumber
     ) {
         let scanData = ScanData(
-            peripheral: Peripheral(cbPeripheral),
+            peripheral: Peripheral(cbPeripheral, logger: logger),
             advertisementData: advertisementData,
             rssi: RSSI
         )
 
         Task {
             guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
-                Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
+                logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown")' because the central manager is not scanning")
                 return
             }
             continuation.yield(scanData)
             
-            Self.logger.info("Found peripheral \(scanData.peripheral.identifier)")
+            logger.info("Found peripheral '\(scanData.peripheral.name ?? "(unknown)")'" +
+                        " with ID: \(scanData.peripheral.identifier)")
         }
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
         Task {
-            Self.logger.info("Connected to peripheral \(peripheral.identifier)")
+            logger.info("Connected to peripheral \(peripheral.identifier)")
             
             do {
                 try await self.context.connectToPeripheralExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result:.success(())
                 )
             } catch {
-                Self.logger.info("Received onDidConnect without a continuation")
+                logger.info("Received onDidConnect without a continuation")
             }
             
             self.context.eventSubject.send(
-                .didConnectPeripheral(peripheral: Peripheral(peripheral))
+                .didConnectPeripheral(peripheral: Peripheral(peripheral, logger: logger))
             )
         }
     }
@@ -294,7 +292,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         error: Error?
     ) {
         Task {
-            Self.logger.warning(
+            logger.warning(
                 "Failed to connect to peripheral \(peripheral.identifier) - error: \(error?.localizedDescription ?? "")"
             )
             
@@ -303,7 +301,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
                     peripheral.identifier, result: .failure(BluetoothError.errorConnectingToPeripheral(error: error))
                 )
             } catch {
-                Self.logger.error("Received onDidFailToConnect without a continuation!")
+                logger.error("Received onDidFailToConnect without a continuation!")
             }
         }
     }
@@ -319,13 +317,13 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result: result
                 )
-                Self.logger.info("Disconnected from \(peripheral.identifier)")
+                logger.info("Disconnected from \(peripheral.identifier)")
             } catch {
-                Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
+                logger.info("Disconnected from \(peripheral.identifier) without a continuation")
             }
             
             self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), error: error)
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral, logger: logger), error: error)
             )
         }
     }
