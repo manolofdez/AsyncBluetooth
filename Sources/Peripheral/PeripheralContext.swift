@@ -7,10 +7,13 @@ import Combine
 /// Contains the objects necessary to track a Peripheral's commands.
 class PeripheralContext {
     private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
+    private(set) lazy var invalidatedServicesSubject = PassthroughSubject<[Service], Never>()
     
     private(set) lazy var readRSSIExecutor = {
         let executor = AsyncSerialExecutor<NSNumber>()
-        flushableExecutors.append(executor)
+        Task {
+            await flushableExecutors.append(executor)
+        }
         return executor
     }()
     
@@ -74,10 +77,10 @@ class PeripheralContext {
         return executor
     }()
     
-    private var flushableExecutors: [FlushableExecutor] = []
+    private var flushableExecutors: ThreadSafeArray<FlushableExecutor> = []
     
     func flush(error: Error) async throws {
-        for flushableExecutor in flushableExecutors {
+        for try await flushableExecutor in flushableExecutors {
             try await flushableExecutor.flush(error: error)
         }
     }
