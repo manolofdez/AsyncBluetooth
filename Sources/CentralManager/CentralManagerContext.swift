@@ -54,10 +54,10 @@ class CentralManagerContext {
         return executor
     }()
     
-    private var flushableExecutors: [FlushableExecutor] = []
+    private var flushableExecutors: ThreadSafeArray<FlushableExecutor> = []
     
     func flush(error: Error) async throws {
-        for flushableExecutor in flushableExecutors {
+        for try await flushableExecutor in flushableExecutors {
             try await flushableExecutor.flush(error: error)
         }
     }
