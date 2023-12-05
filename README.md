@@ -101,6 +101,12 @@ peripheral.characteristicValueUpdatedPublisher
     .store(in: &cancellables)
 ```
 
+Remember that you should enable notifications on that characteristc to receive updated values.
+
+```swift
+try await peripheral.setNotifyValue(true, characteristicUUID, serviceUUID)
+```
+
 ### Canceling operations
 
 To cancel a specific operation, you can wrap your call in a `Task`:
