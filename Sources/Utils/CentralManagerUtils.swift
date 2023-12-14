@@ -10,28 +10,32 @@ struct CentralManagerUtils {
     /// - Returns: success when `poweredOn`; failure when `unsupported`, `unauthorized` or `poweredOff`; and
     ///            nil for `unknown` or `resetting`.
     static func isBluetoothReady(_ bluetoothState: CBManagerState) -> Result<Void, Error>? {
-        guard let isBluetoothReady: Bool = Self.isBluetoothReady(bluetoothState) else {
+        guard bluetoothState != .poweredOn else {
+            return .success(())
+        }
+
+        guard let reason = BluetoothUnavailableReason(bluetoothState) else {
             return nil
         }
-        return isBluetoothReady
-            ? .success(())
-            : .failure(BluetoothError.bluetoothUnavailable)
+
+        return .failure(BluetoothError.bluetoothUnavailable(reason))
     }
-    
-    /// Whether Bluetooth is ready to be used or not given a bluetoothState.
-    /// - Returns: true when `poweredOn`; false when `unsupported`, `unauthorized` or `poweredOff`; and
-    ///            nil for `unknown` or `resetting`.
-    private static func isBluetoothReady(_ bluetoothState: CBManagerState) -> Bool? {
+}
+
+private extension BluetoothUnavailableReason {
+    init?(_ bluetoothState: CBManagerState) {
         switch bluetoothState {
-        case .poweredOn:
-            return true
-        case .unsupported, .unauthorized, .poweredOff:
-            return false
-        case .unknown, .resetting:
+        case .unauthorized:
+            self = .unauthorized
+        case .unsupported:
+            self = .unsupported
+        case .poweredOff:
+            self = .poweredOff
+        case .poweredOn, .unknown, .resetting:
             return nil
         @unknown default:
             AsyncBluetooth.commonLogger.error("Unsupported CBManagerState received with raw value of \(bluetoothState.rawValue)")
-            return false
+            self = .unknown
         }
     }
 }
