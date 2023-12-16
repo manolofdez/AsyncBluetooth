@@ -309,6 +309,30 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }
     
     func centralManager(
+        _ central: CBCentralManager,
+        didDisconnectPeripheral peripheral: CBPeripheral,
+        timestamp: CFAbsoluteTime,
+        isReconnecting: Bool,
+        error: Error?
+    ) {
+        Task {
+            do {
+                let result = CallbackUtils.result(for: (), error: error)
+                try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
+                    peripheral.identifier, result: result
+                )
+                Self.logger.info("Disconnected from \(peripheral.identifier)")
+            } catch {
+                Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
+            }
+            
+            self.context.eventSubject.send(
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: isReconnecting, error: error)
+            )
+        }
+    }
+    
+    func centralManager(
         _ cbCentralManager: CBCentralManager,
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
@@ -325,7 +349,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             }
             
             self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), error: error)
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: false, error: error)
             )
         }
     }
