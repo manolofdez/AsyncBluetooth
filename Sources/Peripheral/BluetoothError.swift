@@ -2,8 +2,15 @@
 
 import Foundation
 
+public enum BluetoothUnavailableReason {
+    case poweredOff
+    case unauthorized
+    case unsupported
+    case unknown
+}
+
 public enum BluetoothError: Error {
-    case bluetoothUnavailable
+    case bluetoothUnavailable(BluetoothUnavailableReason)
     case connectingInProgress
     case disconnectingInProgress
     case cancelledConnectionToPeripheral
