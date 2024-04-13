@@ -7,7 +7,7 @@ import os.log
 class PeripheralDelegate: NSObject {
     
     private static var logger: Logger {
-        LoggingSystem.logger(for: "peripheralDelegate")
+        Logging.logger(for: "peripheralDelegate")
     }
 
     let context = PeripheralContext()

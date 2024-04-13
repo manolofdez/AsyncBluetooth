@@ -10,7 +10,7 @@ import os.log
 public class Peripheral {
         
     private static var logger: Logger {
-        LoggingSystem.logger(for: "peripheral")
+        Logging.logger(for: "peripheral")
     }
     
     /// Publishes characteristics that are notifying of value changes.

@@ -8,6 +8,10 @@ import os.log
 /// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
 public class CentralManager {
     
+    public static func test() {
+        logger.log("WHATS UP!?")
+    }
+    
     private typealias Utils = CentralManagerUtils
     
     fileprivate class DelegateWrapper: NSObject {
@@ -19,7 +23,7 @@ public class CentralManager {
     }
     
     private static var logger: Logger {
-        LoggingSystem.logger(for: "centralManager")
+        Logging.logger(for: "centralManager")
     }
     
     public var bluetoothState: CBManagerState {

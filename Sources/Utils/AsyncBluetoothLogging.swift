@@ -3,7 +3,7 @@
 import Foundation
 import os.log
 
-public class LoggingSystem {
+public class AsyncBluetoothLogging {
     
     public static var isEnabled = true
     
@@ -27,3 +27,5 @@ public class LoggingSystem {
         return logger
     }
 }
+
+typealias Logging = AsyncBluetoothLogging
