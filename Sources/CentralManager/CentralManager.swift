@@ -18,10 +18,9 @@ public class CentralManager {
         }
     }
     
-    private static let logger = Logger(
-        subsystem: Bundle(for: CentralManager.self).bundleIdentifier ?? "",
-        category: "centralManager"
-    )
+    private static var logger: Logger {
+        LoggingSystem.logger(for: "centralManager")
+    }
     
     public var bluetoothState: CBManagerState {
         self.cbCentralManager.state

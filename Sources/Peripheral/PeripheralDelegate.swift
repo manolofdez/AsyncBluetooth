@@ -5,10 +5,10 @@ import CoreBluetooth
 import os.log
 
 class PeripheralDelegate: NSObject {
-    private static let logger = Logger(
-        subsystem: Bundle(for: PeripheralDelegate.self).bundleIdentifier ?? "",
-        category: "peripheralDelegate"
-    )
+    
+    private static var logger: Logger {
+        LoggingSystem.logger(for: "peripheralDelegate")
+    }
 
     let context = PeripheralContext()
 }
