@@ -145,6 +145,14 @@ centralManager.eventPublisher
     .store(in: &cancellables)
 ```
 
+### Logging
+
+The library uses `os.log` to provide logging for several operations. These logs are enabled by default. If you wish to disable them, you can do:
+
+```
+AsyncBluetoothLogging.isEnabled = false
+```
+
 ## Examples
 
 You can find practical, tasty recipes for how to use `AsyncBluetooth` in the 

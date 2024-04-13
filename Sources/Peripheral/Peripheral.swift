@@ -9,10 +9,9 @@ import os.log
 /// - This class acts as a wrapper around `CBPeripheral`.
 public class Peripheral {
         
-    private static let logger = Logger(
-        subsystem: Bundle(for: Peripheral.self).bundleIdentifier ?? "",
-        category: "peripheral"
-    )
+    private static var logger: Logger {
+        Logging.logger(for: "peripheral")
+    }
     
     /// Publishes characteristics that are notifying of value changes.
     public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
