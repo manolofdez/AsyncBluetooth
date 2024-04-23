@@ -20,7 +20,10 @@ let package = Package(
         .target(
             name: "AsyncBluetooth",
             dependencies: [],
-            path: "Sources"
+            path: "Sources",
+            resources: [
+                .copy("PrivacyInfo.xcprivacy")
+            ]
         ),
         .testTarget(
             name: "AsyncBluetoothTests",
