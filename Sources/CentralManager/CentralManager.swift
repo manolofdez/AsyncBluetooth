@@ -89,7 +89,7 @@ public class CentralManager {
             Task {
                 // Note that the enqueue call will remain awaiting until the stream is terminated. This
                 // means that we can end up in a state were the continuation is used to send the stream,
-                // and yet we want to throw an error (e.g. calling `cancellAllOperations` while scanning).
+                // and yet we want to throw an error (e.g. calling `cancelAllOperations` while scanning).
                 // To avoid crashing, we check whether the continuation has been used before.
                 var isContinuationUsed = false
                 
@@ -193,7 +193,7 @@ public class CentralManager {
     }
     
     /// Creates the async stream where scan data will get added as part of scanning for peripherals.
-    /// - Note: The stream is responsable for starting scan.
+    /// - Note: The stream is responsible for starting scan.
     private func createScanDataStream(
         withServices serviceUUIDs: [CBUUID]?,
         options: [String : Any]? = nil
