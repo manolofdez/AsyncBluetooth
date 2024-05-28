@@ -101,6 +101,12 @@ peripheral.characteristicValueUpdatedPublisher
     .store(in: &cancellables)
 ```
 
+Remember that you should enable notifications on that characteristc to receive updated values.
+
+```swift
+try await peripheral.setNotifyValue(true, characteristicUUID, serviceUUID)
+```
+
 ### Canceling operations
 
 To cancel a specific operation, you can wrap your call in a `Task`:
@@ -137,6 +143,14 @@ centralManager.eventPublisher
         }
     }
     .store(in: &cancellables)
+```
+
+### Logging
+
+The library uses `os.log` to provide logging for several operations. These logs are enabled by default. If you wish to disable them, you can do:
+
+```
+AsyncBluetoothLogging.isEnabled = false
 ```
 
 ## Examples
