@@ -7,11 +7,7 @@ import os.log
 
 /// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
 public class CentralManager {
-    
-    public static func test() {
-        logger.log("WHATS UP!?")
-    }
-    
+
     private typealias Utils = CentralManagerUtils
     
     fileprivate class DelegateWrapper: NSObject {
@@ -262,7 +258,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
 
         Task {
             guard let continuation = await self.context.scanForPeripheralsContext.continuation else {
-                Self.logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown", privacy: .private)' because the central manager is not scanning")
+                logger.info("Ignoring peripheral '\(scanData.peripheral.name ?? "unknown")' because the central manager is not scanning")
                 return
             }
             continuation.yield(scanData)
@@ -323,13 +319,13 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
                     peripheral.identifier, result: result
                 )
-                Self.logger.info("Disconnected from \(peripheral.identifier)")
+                logger.info("Disconnected from \(peripheral.identifier)")
             } catch {
-                Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
+                logger.info("Disconnected from \(peripheral.identifier) without a continuation")
             }
             
             self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: isReconnecting, error: error)
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral, logger: logger), isReconnecting: isReconnecting, error: error)
             )
         }
     }
@@ -351,7 +347,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             }
             
             self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: false, error: error)
+                .didDisconnectPeripheral(peripheral: Peripheral(peripheral, logger: logger), isReconnecting: false, error: error)
             )
         }
     }
