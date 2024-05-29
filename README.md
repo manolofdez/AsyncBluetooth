@@ -101,7 +101,7 @@ peripheral.characteristicValueUpdatedPublisher
     .store(in: &cancellables)
 ```
 
-Remember that you should enable notifications on that characteristc to receive updated values.
+Remember that you should enable notifications on that characteristic to receive updated values.
 
 ```swift
 try await peripheral.setNotifyValue(true, characteristicUUID, serviceUUID)
@@ -170,7 +170,7 @@ to your Package Dependencies.
 - iOS 14.0+
 - MacOS 11.0+
 - Swift 5
-- Xcoce 13.2.1+
+- Xcode 13.2.1+
 
 ## License
 
