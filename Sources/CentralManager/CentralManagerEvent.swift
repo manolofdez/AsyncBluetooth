@@ -8,4 +8,7 @@ public enum CentralManagerEvent {
     case willRestoreState(state: [String: Any])
     case didConnectPeripheral(peripheral: Peripheral)
     case didDisconnectPeripheral(peripheral: Peripheral, isReconnecting: Bool = false, error: Error?)
+
+    @available(macOS, unavailable)
+    case connectionEventDidOccur(connectionEvent: CBConnectionEvent, peripheral: Peripheral)
 }

@@ -140,7 +140,12 @@ public class CentralManager {
             self.cbCentralManager.connect(peripheral.cbPeripheral, options: options)
         }
     }
-    
+
+    @available(macOS, unavailable)
+    public func registerForConnectionEvents(options: [CBConnectionEventMatchingOption: Any]? = nil) {
+        self.cbCentralManager.registerForConnectionEvents(options: options)
+    }
+
     /// Cancels an active or pending local connection to a peripheral.
     public func cancelPeripheralConnection(_ peripheral: Peripheral) async throws {
         let peripheralState = peripheral.cbPeripheral.state
@@ -290,7 +295,33 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             )
         }
     }
-    
+
+    #if !os(macOS)
+    func centralManager(
+        _ cbCentralManager: CBCentralManager,
+        connectionEventDidOccur event: CBConnectionEvent,
+        for cbPeripheral: CBPeripheral
+    ) {
+        let peripheral = Peripheral(cbPeripheral)
+
+        switch event {
+        case .peerConnected:
+            Self.logger.info("Connection event for \(peripheral.identifier)")
+        case .peerDisconnected:
+            Self.logger.info("Disconnection event for \(peripheral.identifier)")
+        @unknown default:
+            break
+        }
+
+        self.context.eventSubject.send(
+            .connectionEventDidOccur(
+                connectionEvent: event,
+                peripheral: peripheral
+            )
+        )
+    }
+    #endif
+
     func centralManager(
         _ cbCentralManager: CBCentralManager,
         didFailToConnect peripheral: CBPeripheral,
