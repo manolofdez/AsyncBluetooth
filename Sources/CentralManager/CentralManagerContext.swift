@@ -5,7 +5,7 @@ import CoreBluetooth
 import Combine
 
 /// Contains the objects necessary to track a Central Manager's commands.
-class CentralManagerContext {
+actor CentralManagerContext {
     actor ScanForPeripheralsContext {
         let onContinuationChanged: (_ isScanning: Bool) -> Void
         
@@ -25,7 +25,9 @@ class CentralManagerContext {
     private(set) var isScanning = false
     
     private(set) lazy var scanForPeripheralsContext = ScanForPeripheralsContext { [weak self] isScanning in
-        self?.isScanning = isScanning
+        Task { [weak self] in
+            await self?.updateIsScanning(isScanning)
+        }
     }
     
     private(set) lazy var eventSubject = PassthroughSubject<CentralManagerEvent, Never>()
@@ -60,5 +62,9 @@ class CentralManagerContext {
         for try await flushableExecutor in flushableExecutors {
             try await flushableExecutor.flush(error: error)
         }
+    }
+    
+    private func updateIsScanning(_ isScanning: Bool) {
+        self.isScanning = isScanning
     }
 }

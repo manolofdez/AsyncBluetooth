@@ -1,22 +1,24 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 import Combine
 import os.log
 
 /// A remote peripheral device.
 /// - This class acts as a wrapper around `CBPeripheral`.
-public class Peripheral {
+public final class Peripheral: Sendable {
         
     private static var logger: Logger {
         Logging.logger(for: "peripheral")
     }
     
     /// Publishes characteristics that are notifying of value changes.
-    public lazy var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> = {
-        self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
-    }()
+    public var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> {
+        get async {
+            await self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
+        }
+    }
     
     /// The UUID associated with the peripheral.
     public var identifier: UUID {

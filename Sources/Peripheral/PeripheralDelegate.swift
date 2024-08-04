@@ -4,7 +4,7 @@ import Foundation
 import CoreBluetooth
 import os.log
 
-class PeripheralDelegate: NSObject {
+final class PeripheralDelegate: NSObject, Sendable {
     
     private static var logger: Logger {
         Logging.logger(for: "peripheralDelegate")
@@ -65,13 +65,11 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     }
     
     func peripheral(_ cbPeripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        
-        if characteristic.isNotifying {
-           // characteristic.value is Data() and it will get trampled if allowed to run async.
-           self.context.characteristicValueUpdatedSubject.send( Characteristic(characteristic) )
-        }
-           
         Task {
+            if characteristic.isNotifying {
+               await self.context.characteristicValueUpdatedSubject.send(Characteristic(characteristic))
+            }
+
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.readCharacteristicValueExecutor.setWorkCompletedForKey(
@@ -169,6 +167,8 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        self.context.invalidatedServicesSubject.send(invalidatedServices.map { Service($0) })
+        Task {
+            await self.context.invalidatedServicesSubject.send(invalidatedServices.map { Service($0) })
+        }
     }
 }
