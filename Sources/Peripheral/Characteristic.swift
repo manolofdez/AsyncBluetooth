@@ -1,11 +1,11 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 
 /// A characteristic of a remote peripheral’s service.
 /// - This class acts as a wrapper around `CBCharacteristic`.
-public struct Characteristic {
+public struct Characteristic: Sendable {
     public let cbCharacteristic: CBCharacteristic
     
     public init(_ cbCharacteristic: CBCharacteristic) {

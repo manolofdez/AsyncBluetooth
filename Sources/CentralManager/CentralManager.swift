@@ -1,12 +1,12 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
-import CoreBluetooth
-import Combine
+@preconcurrency import CoreBluetooth
+@preconcurrency import Combine
 import os.log
 
 /// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
-public class CentralManager: @unchecked Sendable {
+public final class CentralManager: Sendable {
     
     private typealias Utils = CentralManagerUtils
     

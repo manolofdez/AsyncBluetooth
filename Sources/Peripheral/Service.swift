@@ -1,11 +1,11 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 
 /// A collection of data and associated behaviors that accomplish a function or feature of a device.
 /// - This class acts as a wrapper around `CBService`.
-public struct Service: @unchecked Sendable {
+public struct Service: Sendable {
     let cbService: CBService
     
     /// The Bluetooth-specific UUID of the service.
