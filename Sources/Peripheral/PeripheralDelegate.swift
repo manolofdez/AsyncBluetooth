@@ -67,8 +67,7 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     func peripheral(_ cbPeripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         Task {
             if characteristic.isNotifying {
-               // characteristic.value is Data() and it will get trampled if allowed to run async.
-               await self.context.characteristicValueUpdatedSubject.send( Characteristic(characteristic) )
+               await self.context.characteristicValueUpdatedSubject.send(Characteristic(characteristic))
             }
 
             do {
