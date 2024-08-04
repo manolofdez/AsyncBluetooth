@@ -2,7 +2,7 @@
 
 import Foundation
 @preconcurrency import CoreBluetooth
-@preconcurrency import Combine
+import Combine
 import os.log
 
 /// A remote peripheral device.

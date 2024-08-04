@@ -2,7 +2,7 @@
 
 import Foundation
 @preconcurrency import CoreBluetooth
-@preconcurrency import Combine
+import Combine
 import os.log
 
 /// An object that scans for, discovers, connects to, and manages peripherals using concurrency.
