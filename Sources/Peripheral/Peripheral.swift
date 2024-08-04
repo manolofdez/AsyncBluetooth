@@ -14,7 +14,11 @@ public final class Peripheral: Sendable {
     }
     
     /// Publishes characteristics that are notifying of value changes.
-    public let characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never>
+    public var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> {
+        get async {
+            await self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
+        }
+    }
     
     /// The UUID associated with the peripheral.
     public var identifier: UUID {
@@ -62,7 +66,6 @@ public final class Peripheral: Sendable {
         // This is important because we can create multiple Peripherals for a single cbPeripheral.
         if let cbPeripheralDelegate = cbPeripheral.delegate as? PeripheralDelegate {
             self.cbPeripheralDelegate = cbPeripheralDelegate
-            self.characteristicValueUpdatedPublisher = self.cbPeripheralDelegate.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
             return
         }
         
@@ -72,7 +75,6 @@ public final class Peripheral: Sendable {
         
         self.cbPeripheralDelegate = PeripheralDelegate()
         self.cbPeripheral.delegate = self.cbPeripheralDelegate
-        self.characteristicValueUpdatedPublisher = self.cbPeripheralDelegate.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
     }
     
     /// Retrieves the current RSSI value for the peripheral while connected to the central manager.

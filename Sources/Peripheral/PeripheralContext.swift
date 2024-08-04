@@ -5,7 +5,7 @@ import CoreBluetooth
 import Combine
 
 /// Contains the objects necessary to track a Peripheral's commands.
-class PeripheralContext {
+actor PeripheralContext {
     private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
     private(set) lazy var invalidatedServicesSubject = PassthroughSubject<[Service], Never>()
     
