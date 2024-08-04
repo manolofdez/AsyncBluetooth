@@ -7,7 +7,7 @@ import os.log
 
 /// A remote peripheral device.
 /// - This class acts as a wrapper around `CBPeripheral`.
-public class Peripheral {
+public class Peripheral: @unchecked Sendable {
         
     private static var logger: Logger {
         Logging.logger(for: "peripheral")

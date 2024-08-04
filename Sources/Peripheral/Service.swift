@@ -5,7 +5,7 @@ import CoreBluetooth
 
 /// A collection of data and associated behaviors that accomplish a function or feature of a device.
 /// - This class acts as a wrapper around `CBService`.
-public struct Service {
+public struct Service: @unchecked Sendable {
     let cbService: CBService
     
     /// The Bluetooth-specific UUID of the service.

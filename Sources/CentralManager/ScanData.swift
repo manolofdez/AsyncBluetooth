@@ -4,7 +4,7 @@ import Foundation
 import CoreBluetooth
 
 /// Represents a single value gathered when scanning for peripheral.
-public struct ScanData {
+public struct ScanData: @unchecked Sendable {
     public let peripheral: Peripheral
     /// A dictionary containing any advertisement and scan response data.
     public let advertisementData: [String : Any]
