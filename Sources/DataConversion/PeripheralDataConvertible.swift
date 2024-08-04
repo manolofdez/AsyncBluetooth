@@ -51,12 +51,25 @@ extension PeripheralDataConvertible where Self: Numeric {
         }
         return value
     }
-    
+}
+
+extension Int: PeripheralDataConvertible {
     public func toData() -> Data? {
         var value = self
         return .init(bytes: &value, count: MemoryLayout<Self>.size)
     }
 }
 
-extension Int: PeripheralDataConvertible {}
-extension Float: PeripheralDataConvertible {}
+extension Double: PeripheralDataConvertible {
+    public func toData() -> Data? {
+        var value = self
+        return .init(bytes: &value, count: MemoryLayout<Self>.size)
+    }
+}
+
+extension Float: PeripheralDataConvertible {
+    public func toData() -> Data? {
+        var value = self
+        return .init(bytes: &value, count: MemoryLayout<Self>.size)
+    }
+}
