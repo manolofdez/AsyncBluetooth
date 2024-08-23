@@ -65,7 +65,7 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     }
     
     func peripheral(_ cbPeripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        Task {
+        Task { @MainActor in
             if characteristic.isNotifying {
                await self.context.characteristicValueUpdatedSubject.send(Characteristic(characteristic))
             }

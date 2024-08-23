@@ -32,6 +32,7 @@ public final class CentralManager: Sendable {
         }
     }
     
+    @MainActor
     public var eventPublisher: AnyPublisher<CentralManagerEvent, Never> {
         get async {
             await self.context.eventSubject.eraseToAnyPublisher()
@@ -240,7 +241,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }()
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        Task {
+        Task { @MainActor in
             await self.context.eventSubject.send(.didUpdateState(state: central.state))
             
             guard let isBluetoothReadyResult = Utils.isBluetoothReady(central.state) else { return }
@@ -250,7 +251,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }
     
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String : Any]) {
-        Task {
+        Task { @MainActor in
             await self.context.eventSubject.send(.willRestoreState(state: dict))
         }
     }
@@ -280,7 +281,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        Task {
+        Task { @MainActor in
             Self.logger.info("Connected to peripheral \(peripheral.identifier)")
             
             do {
@@ -314,7 +315,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             break
         }
 
-        Task {
+        Task { @MainActor in
             await self.context.eventSubject.send(
                 .connectionEventDidOccur(
                     connectionEvent: event,
@@ -352,7 +353,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         isReconnecting: Bool,
         error: Error?
     ) {
-        Task {
+        Task { @MainActor in
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
@@ -374,7 +375,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        Task {
+        Task { @MainActor in
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
