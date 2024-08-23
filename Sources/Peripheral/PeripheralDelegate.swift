@@ -167,7 +167,7 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     }
     
     func peripheral(_ peripheral: CBPeripheral, didModifyServices invalidatedServices: [CBService]) {
-        Task {
+        Task { @MainActor in
             await self.context.invalidatedServicesSubject.send(invalidatedServices.map { Service($0) })
         }
     }

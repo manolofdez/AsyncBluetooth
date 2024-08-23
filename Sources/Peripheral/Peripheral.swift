@@ -21,6 +21,14 @@ public final class Peripheral: Sendable {
         }
     }
     
+    /// Publishes when the services of the peripheral has changed.
+    @MainActor
+    public var invalidatedServices: AnyPublisher<[Service], Never> {
+        get async {
+            await self.context.invalidatedServicesSubject.eraseToAnyPublisher()
+        }
+    }
+    
     /// The UUID associated with the peripheral.
     public var identifier: UUID {
         self.cbPeripheral.identifier
