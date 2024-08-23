@@ -150,7 +150,7 @@ await centralManager.eventPublisher
 The library uses `os.log` to provide logging for several operations. These logs are enabled by default. If you wish to disable them, you can do:
 
 ```
-AsyncBluetoothLogging.isEnabled = false
+AsyncBluetoothLogging.setEnabled(false)
 ```
 
 ## Examples
