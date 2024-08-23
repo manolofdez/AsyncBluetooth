@@ -3,12 +3,16 @@
 import Foundation
 import os.log
 
-public class AsyncBluetoothLogging {
+public final class AsyncBluetoothLogging: Sendable {
     
-    public static var isEnabled = true
+    private(set) static var isEnabled = true
     
     private static var loggers: [String: Logger] = [:]
     private static let disabledLogger = Logger(OSLog.disabled)
+    
+    public static func setEnabled(_ isEnabled: Bool) {
+        Self.isEnabled = isEnabled
+    }
     
     static func logger(for category: String) -> Logger {
         guard Self.isEnabled else { return Self.disabledLogger }
