@@ -15,7 +15,7 @@ public final class Peripheral: Sendable {
     
     /// Publishes characteristics that are notifying of value changes.
     @MainActor
-    public var characteristicValueUpdatedPublisher: AnyPublisher<Characteristic, Never> {
+    public var characteristicValueUpdatedPublisher: AnyPublisher<CharacteristicValueUpdateEventData, Never> {
         get async {
             await self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
         }
