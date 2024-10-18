@@ -6,7 +6,7 @@ import Combine
 
 /// Contains the objects necessary to track a Peripheral's commands.
 actor PeripheralContext {
-    private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<Characteristic, Never>()
+    private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<CharacteristicValueUpdateEventData, Never>()
     private(set) lazy var invalidatedServicesSubject = PassthroughSubject<[Service], Never>()
     
     private(set) lazy var readRSSIExecutor = {
