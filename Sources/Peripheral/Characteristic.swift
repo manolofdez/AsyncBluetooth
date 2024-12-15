@@ -7,33 +7,18 @@ import Foundation
 /// - This class acts as a wrapper around `CBCharacteristic`.
 public struct Characteristic: Sendable {
     public let cbCharacteristic: CBCharacteristic
-    
+    public let uuid: CBUUID
+    public let properties: CBCharacteristicProperties
+    public let value: Data?
+    public let descriptors: [Descriptor]?
+    public let isNotifying: Bool
+
     public init(_ cbCharacteristic: CBCharacteristic) {
         self.cbCharacteristic = cbCharacteristic
-    }
-    
-    /// The Bluetooth-specific UUID of the characteristic.
-    public var uuid: CBUUID {
-        self.cbCharacteristic.uuid
-    }
-    
-    public var properties: CBCharacteristicProperties {
-        self.cbCharacteristic.properties
-    }
-    
-    /// The latest value read for this characteristic.
-    public var value: Data? {
-        self.cbCharacteristic.value
-    }
-
-    /// A list of the descriptors discovered in this characteristic.
-    public var descriptors: [Descriptor]? {
-        self.cbCharacteristic.descriptors?.map { Descriptor($0) }
-    }
-
-    /// A Boolean value that indicates whether the characteristic is currently notifying a subscribed central
-    /// of its value.
-    public var isNotifying: Bool {
-        self.cbCharacteristic.isNotifying
+        self.uuid = cbCharacteristic.uuid
+        self.properties = cbCharacteristic.properties
+        self.value = cbCharacteristic.value
+        self.descriptors = cbCharacteristic.descriptors?.map { Descriptor($0) }
+        self.isNotifying = cbCharacteristic.isNotifying
     }
 }

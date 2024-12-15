@@ -1,11 +1,11 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
-import CoreBluetooth
+@preconcurrency import CoreBluetooth
 
 /// An object that provides further information about a remote peripheral’s characteristic.
 /// - This class acts as a wrapper for `CBDescriptor`.
-public struct Descriptor {
+public struct Descriptor: Sendable {
     let cbDescriptor: CBDescriptor
     
     init(_ cbDescriptor: CBDescriptor) {
