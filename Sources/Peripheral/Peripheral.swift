@@ -14,18 +14,16 @@ public final class Peripheral: Sendable {
     }
     
     /// Publishes characteristics that are notifying of value changes.
-    @MainActor
     public var characteristicValueUpdatedPublisher: AnyPublisher<CharacteristicValueUpdateEventData, Never> {
-        get async {
-            await self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
+        get {
+            self.context.characteristicValueUpdatedSubject.eraseToAnyPublisher()
         }
     }
     
     /// Publishes when the services of the peripheral has changed.
-    @MainActor
     public var invalidatedServices: AnyPublisher<[Service], Never> {
-        get async {
-            await self.context.invalidatedServicesSubject.eraseToAnyPublisher()
+        get {
+            self.context.invalidatedServicesSubject.eraseToAnyPublisher()
         }
     }
     
