@@ -45,7 +45,7 @@ try await centralManager.connect(peripheral, options: nil)
 The central manager publishes several events. You can subscribe to them by using the `eventPublisher`.
 
 ```swift
-await centralManager.eventPublisher
+centralManager.eventPublisher
     .sink {
         switch $0 {
         case .didConnectPeripheral(let peripheral):
@@ -92,7 +92,7 @@ To get notified when a characteristic's value is updated, we provide a publisher
 
 ```swift
 let characteristicUUID = CBUUID()
-await peripheral.characteristicValueUpdatedPublisher
+peripheral.characteristicValueUpdatedPublisher
     .filter { $0.characteristic.uuid == characteristicUUID }
     .map { try? $0.parsedValue() as String? } // replace `String?` with your type
     .sink { value in
@@ -129,7 +129,7 @@ fetchTask.cancel()
 There might also be cases were you want to stop awaiting for all responses. For example, when bluetooth has been powered off. This can be done like so:
 
 ```swift
-await centralManager.eventPublisher
+centralManager.eventPublisher
     .sink {
         switch $0 {
         case .didUpdateState(let state):
