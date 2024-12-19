@@ -93,7 +93,7 @@ To get notified when a characteristic's value is updated, we provide a publisher
 ```swift
 let characteristicUUID = CBUUID()
 await peripheral.characteristicValueUpdatedPublisher
-    .filter { $0.uuid == characteristicUUID }
+    .filter { $0.characteristic.uuid == characteristicUUID }
     .map { try? $0.parsedValue() as String? } // replace `String?` with your type
     .sink { value in
         print("Value updated to '\(value)'")
