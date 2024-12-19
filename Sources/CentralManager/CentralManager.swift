@@ -240,7 +240,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }()
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        Task { @MainActor in
+        Task {
             self.context.eventSubject.send(.didUpdateState(state: central.state))
             
             guard let isBluetoothReadyResult = Utils.isBluetoothReady(central.state) else { return }
@@ -278,7 +278,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }
     
     func centralManager(_ cbCentralManager: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        Task { @MainActor in
+        Task {
             Self.logger.info("Connected to peripheral \(peripheral.identifier)")
             
             do {
@@ -345,7 +345,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         isReconnecting: Bool,
         error: Error?
     ) {
-        Task { @MainActor in
+        Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
@@ -367,7 +367,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         didDisconnectPeripheral peripheral: CBPeripheral,
         error: Error?
     ) {
-        Task { @MainActor in
+        Task {
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
