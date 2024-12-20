@@ -6,8 +6,8 @@ import Combine
 
 /// Contains the objects necessary to track a Peripheral's commands.
 actor PeripheralContext {
-    private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<CharacteristicValueUpdateEventData, Never>()
-    private(set) lazy var invalidatedServicesSubject = PassthroughSubject<[Service], Never>()
+    nonisolated private(set) lazy var characteristicValueUpdatedSubject = PassthroughSubject<CharacteristicValueUpdateEventData, Never>()
+    nonisolated private(set) lazy var invalidatedServicesSubject = PassthroughSubject<[Service], Never>()
     
     private(set) lazy var readRSSIExecutor = {
         let executor = AsyncSerialExecutor<NSNumber>()

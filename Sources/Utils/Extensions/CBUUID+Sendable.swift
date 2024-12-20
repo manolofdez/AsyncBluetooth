@@ -3,4 +3,4 @@
 import Foundation
 import CoreBluetooth
 
-extension CBUUID: @unchecked Sendable {}
+extension CBUUID: @unchecked @retroactive Sendable {}

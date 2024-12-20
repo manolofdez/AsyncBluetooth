@@ -26,11 +26,11 @@ actor CentralManagerContext {
     
     private(set) lazy var scanForPeripheralsContext = ScanForPeripheralsContext { [weak self] isScanning in
         Task { [weak self] in
-            await self?.updateIsScanning(isScanning)
+            self?.updateIsScanning(isScanning)
         }
     }
     
-    private(set) lazy var eventSubject = PassthroughSubject<CentralManagerEvent, Never>()
+    nonisolated private(set) lazy var eventSubject = PassthroughSubject<CentralManagerEvent, Never>()
     
     private(set) lazy var waitUntilReadyExecutor = {
         let executor = AsyncSerialExecutor<Void>()
