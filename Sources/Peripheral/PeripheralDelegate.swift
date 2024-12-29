@@ -67,11 +67,11 @@ extension PeripheralDelegate: CBPeripheralDelegate {
     func peripheral(_ cbPeripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         let eventData = CharacteristicValueUpdateEventData(characteristic: Characteristic(characteristic))
         
+        if characteristic.isNotifying {
+           self.context.characteristicValueUpdatedSubject.send(eventData)
+        }
+        
         Task {
-            if characteristic.isNotifying {
-               self.context.characteristicValueUpdatedSubject.send(eventData)
-            }
-
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.readCharacteristicValueExecutor.setWorkCompletedForKey(
