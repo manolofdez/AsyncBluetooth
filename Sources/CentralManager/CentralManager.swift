@@ -240,9 +240,9 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     }()
     
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
+        self.context.eventSubject.send(.didUpdateState(state: central.state))
+        
         Task {
-            self.context.eventSubject.send(.didUpdateState(state: central.state))
-            
             guard let isBluetoothReadyResult = Utils.isBluetoothReady(central.state) else { return }
 
             await self.context.waitUntilReadyExecutor.flush(isBluetoothReadyResult)
@@ -288,11 +288,11 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             } catch {
                 Self.logger.info("Received onDidConnect without a continuation")
             }
-            
-            self.context.eventSubject.send(
-                .didConnectPeripheral(peripheral: Peripheral(peripheral))
-            )
         }
+        
+        self.context.eventSubject.send(
+            .didConnectPeripheral(peripheral: Peripheral(peripheral))
+        )
     }
 
     #if !os(macOS)
@@ -355,11 +355,11 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             } catch {
                 Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
             }
-            
-            self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: isReconnecting, error: error)
-            )
         }
+        
+        self.context.eventSubject.send(
+            .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: isReconnecting, error: error)
+        )
     }
     
     func centralManager(
@@ -377,10 +377,10 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
             } catch {
                 Self.logger.info("Disconnected from \(peripheral.identifier) without a continuation")
             }
-            
-            self.context.eventSubject.send(
-                .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: false, error: error)
-            )
         }
+        
+        self.context.eventSubject.send(
+            .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: false, error: error)
+        )
     }
 }
