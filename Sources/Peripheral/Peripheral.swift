@@ -156,7 +156,7 @@ public final class Peripheral: Sendable {
             
             self.cbPeripheral.writeValue(data, for: characteristic.cbCharacteristic, type: type)
             
-            guard type == .withoutResponse else {
+            guard type == .withResponse else {
                 return
             }
             
