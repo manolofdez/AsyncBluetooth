@@ -26,7 +26,7 @@ actor CentralManagerContext {
     
     private(set) lazy var scanForPeripheralsContext = ScanForPeripheralsContext { [weak self] isScanning in
         Task { [weak self] in
-            self?.updateIsScanning(isScanning)
+            await self?.updateIsScanning(isScanning)
         }
     }
     
