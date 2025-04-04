@@ -340,12 +340,16 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
     
     func centralManager(
         _ central: CBCentralManager,
-        didDisconnectPeripheral peripheral: CBPeripheral,
+        didDisconnectPeripheral cbPeripheral: CBPeripheral,
         timestamp: CFAbsoluteTime,
         isReconnecting: Bool,
         error: Error?
     ) {
+        let peripheral = Peripheral(cbPeripheral)
+        
         Task {
+            await peripheral.cancelAllOperations()
+            
             do {
                 let result = CallbackUtils.result(for: (), error: error)
                 try await self.context.cancelPeripheralConnectionExecutor.setWorkCompletedForKey(
@@ -358,7 +362,7 @@ extension CentralManager.DelegateWrapper: CBCentralManagerDelegate {
         }
         
         self.context.eventSubject.send(
-            .didDisconnectPeripheral(peripheral: Peripheral(peripheral), isReconnecting: isReconnecting, error: error)
+            .didDisconnectPeripheral(peripheral: peripheral, isReconnecting: isReconnecting, error: error)
         )
     }
     
