@@ -3,7 +3,7 @@
 import Foundation
 
 extension AsyncSerialExecutor: FlushableExecutor {
-    func flush(error: Error) async throws {
+    func flush(error: Error) async {
         self.flush(.failure(error))
     }
 }

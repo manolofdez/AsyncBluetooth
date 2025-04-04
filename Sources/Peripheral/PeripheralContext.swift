@@ -79,9 +79,9 @@ actor PeripheralContext {
     
     private var flushableExecutors: ThreadSafeArray<FlushableExecutor> = []
     
-    func flush(error: Error) async throws {
-        for try await flushableExecutor in flushableExecutors {
-            try await flushableExecutor.flush(error: error)
+    func flush(error: Error) async {
+        for await flushableExecutor in flushableExecutors {
+            await flushableExecutor.flush(error: error)
         }
     }
 }
