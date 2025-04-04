@@ -59,8 +59,8 @@ actor CentralManagerContext {
     private var flushableExecutors: ThreadSafeArray<FlushableExecutor> = []
     
     func flush(error: Error) async throws {
-        for try await flushableExecutor in flushableExecutors {
-            try await flushableExecutor.flush(error: error)
+        for await flushableExecutor in flushableExecutors {
+            await flushableExecutor.flush(error: error)
         }
     }
     

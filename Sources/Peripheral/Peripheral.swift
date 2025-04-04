@@ -100,8 +100,8 @@ public final class Peripheral: Sendable {
     }
     
     /// Cancels all pending operations, and stops awaiting for any responses.
-    public func cancelAllOperations() async throws {
-        try await self.context.flush(error: BluetoothError.operationCancelled)
+    public func cancelAllOperations() async {
+        await self.context.flush(error: BluetoothError.operationCancelled)
     }
     
     // MARK: Services

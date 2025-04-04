@@ -30,7 +30,7 @@ extension ThreadSafeArray: AsyncSequence {
             self.threadSafeArray = threadSafeArray
         }
 
-        mutating func next() async throws -> Element? {
+        mutating func next() async -> Element? {
             if iterator == nil {
                 iterator = await threadSafeArray.array.makeIterator()
             }

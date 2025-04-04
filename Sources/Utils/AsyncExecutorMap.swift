@@ -1,11 +1,16 @@
 //  Copyright (c) 2021 Manuel Fernandez-Peix Perez. All rights reserved.
 
 import Foundation
+import os.log
 
 /// Executes work in parallel when keys are different, and serially when there's work queued for a given key.
 /// After work for a given key has started, this class will await until the client completes it before taking
 /// on the next work for that key.
 actor AsyncExecutorMap<Key, Value> where Key: Hashable {
+    
+    private static var logger: Logger {
+        Logging.logger(for: "asyncExecuterMap")
+    }
     
     enum AsyncExecutorMapError: Error {
         case executorNotFound
@@ -62,9 +67,13 @@ actor AsyncExecutorMap<Key, Value> where Key: Hashable {
 }
 
 extension AsyncExecutorMap: FlushableExecutor {
-    func flush(error: Error) async throws {
+    func flush(error: Error) async {
         for key in self.executors.keys {
-            try await self.flush(key: key, result: .failure(error))
+            do {
+                try await self.flush(key: key, result: .failure(error))
+            } catch {
+                Self.logger.warning("Unable to flush executor with key: \("\(key)").")
+            }
         }
     }
 }

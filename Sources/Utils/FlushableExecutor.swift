@@ -4,5 +4,5 @@ import Foundation
  
 protocol FlushableExecutor where Self: Actor {
     /// Sends an error to all queued and executing work.
-    func flush(error: Error) async throws
+    func flush(error: Error) async
 }
