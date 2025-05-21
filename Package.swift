@@ -1,13 +1,13 @@
-// swift-tools-version:5.3
+// swift-tools-version:6.0
 
 import PackageDescription
 
 let package = Package(
     name: "AsyncBluetooth",
     platforms: [
-        .macOS("11.0"),
-        .iOS("14.0"),
-        .watchOS("7.0")
+        .macOS(.v11),
+        .iOS(.v14),
+        .watchOS(.v7)
     ],
     products: [
         .library(
@@ -15,11 +15,9 @@ let package = Package(
             targets: ["AsyncBluetooth"]
         ),
     ],
-    dependencies: [],
     targets: [
         .target(
             name: "AsyncBluetooth",
-            dependencies: [],
             path: "Sources",
             resources: [
                 .copy("PrivacyInfo.xcprivacy")
@@ -31,5 +29,5 @@ let package = Package(
             path: "Tests"
         ),
     ],
-    swiftLanguageVersions: [.v5]
+    swiftLanguageModes: [.v5]
 )
