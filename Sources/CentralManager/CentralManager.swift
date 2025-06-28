@@ -184,11 +184,11 @@ public final class CentralManager: Sendable {
     
     /// Cancels all pending operations, stops scanning and awaiting for any responses.
     /// - Note: Operation for Peripherals will not be cancelled. To do that, call `cancelAllOperations()` on the `Peripheral`.
-    public func cancelAllOperations() async throws {
+    public func cancelAllOperations() async {
         if await isScanning {
             await self.stopScan()
         }
-        try await self.context.flush(error: BluetoothError.operationCancelled)
+        await self.context.flush(error: BluetoothError.operationCancelled)
     }
 
     /// Returns a Boolean that indicates whether the device supports a specific set of features.
