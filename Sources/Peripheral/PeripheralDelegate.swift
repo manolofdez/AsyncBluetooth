@@ -6,9 +6,7 @@ import os.log
 
 final class PeripheralDelegate: NSObject, Sendable {
     
-    private static var logger: Logger {
-        Logging.logger(for: "peripheralDelegate")
-    }
+    private static let logger = AsyncBluetoothLogging.createLogger(for: "peripheralDelegate")
 
     let context = PeripheralContext()
 }

@@ -9,9 +9,7 @@ import os.log
 /// - This class acts as a wrapper around `CBPeripheral`.
 public final class Peripheral: Sendable {
         
-    private static var logger: Logger {
-        Logging.logger(for: "peripheral")
-    }
+    private static let logger = AsyncBluetoothLogging.createLogger(for: "peripheral")
     
     /// Publishes characteristics that are notifying of value changes.
     public var characteristicValueUpdatedPublisher: AnyPublisher<CharacteristicValueUpdateEventData, Never> {
