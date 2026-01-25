@@ -18,9 +18,7 @@ public final class CentralManager: Sendable {
         }
     }
     
-    private static var logger: Logger {
-        Logging.logger(for: "centralManager")
-    }
+    private static let logger = AsyncBluetoothLogging.createLogger(for: "centralManager")
     
     public var bluetoothState: CBManagerState {
         self.cbCentralManager.state

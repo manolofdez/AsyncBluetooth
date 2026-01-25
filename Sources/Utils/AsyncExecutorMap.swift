@@ -3,14 +3,12 @@
 import Foundation
 import os.log
 
+private let asyncExecuterMapLogger = AsyncBluetoothLogging.createLogger(for: "asyncExecuterMap")
+
 /// Executes work in parallel when keys are different, and serially when there's work queued for a given key.
 /// After work for a given key has started, this class will await until the client completes it before taking
 /// on the next work for that key.
 actor AsyncExecutorMap<Key, Value> where Key: Hashable {
-    
-    private static var logger: Logger {
-        Logging.logger(for: "asyncExecuterMap")
-    }
     
     enum AsyncExecutorMapError: Error {
         case executorNotFound
@@ -72,7 +70,7 @@ extension AsyncExecutorMap: FlushableExecutor {
             do {
                 try await self.flush(key: key, result: .failure(error))
             } catch {
-                Self.logger.warning("Unable to flush executor with key: \("\(key)").")
+                asyncExecuterMapLogger.warning("Unable to flush executor with key: \("\(key)").")
             }
         }
     }
